@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'login_page.dart';
+import '../services/auth_api.dart';
+import 'otp_page.dart';
+
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -31,29 +34,57 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 
   Future<void> _handleSignup() async {
-    if (_formKey.currentState!.validate()) {
-      if (!_agreeToTerms) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please agree to the terms and conditions'), backgroundColor: Colors.red),
-        );
-        return;
-      }
+  print("SIGNUP button pressed - calling backend");
 
-      setState(() => _isLoading = true);
-      await Future.delayed(const Duration(seconds: 2));
-      setState(() => _isLoading = false);
+  if (!_formKey.currentState!.validate()) return;
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Account created successfully!'), backgroundColor: Colors.green),
-        );
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const LoginScreen()),
-        );
-      }
-    }
+  if (!_agreeToTerms) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Please agree to the terms and conditions'),
+        backgroundColor: Colors.red,
+      ),
+    );
+    return;
   }
+
+  setState(() => _isLoading = true);
+
+  try {
+    final result = await AuthApi.signup(
+      fullName: _nameController.text.trim(),
+      email: _emailController.text.trim(),
+      phone: _phoneController.text.trim(),
+      password: _passwordController.text,
+    );
+
+    print("Signup API response: $result");
+
+    final challengeId = int.tryParse(result["challengeId"].toString());
+    if (challengeId == null) throw Exception("Invalid challengeId from server");
+
+    if (!mounted) return;
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => OtpScreen(
+          flow: OtpFlow.signupVerify,
+          challengeId: challengeId,
+        ),
+      ),
+    );
+  } catch (e) {
+    print("SIGNUP ERROR: $e");
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(e.toString().replaceFirst("Exception: ", ""))),
+    );
+  } finally {
+    if (mounted) setState(() => _isLoading = false);
+  }
+}
+
 
   @override
   Widget build(BuildContext context) {
