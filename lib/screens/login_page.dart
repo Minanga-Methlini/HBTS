@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'signup_page.dart';
+import '../services/auth_api.dart';
+import 'otp_page.dart';
+
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -23,24 +26,45 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleLogin() async {
-    if (_formKey.currentState!.validate()) {
-      setState(() => _isLoading = true);
+    print("LOGIN button pressed - calling backend");
+  if (!_formKey.currentState!.validate()) return;
 
-      // Simulate API call
-      await Future.delayed(const Duration(seconds: 2));
+  setState(() => _isLoading = true);
 
-      setState(() => _isLoading = false);
+  try {
+    final result = await AuthApi.login(
+      email: _emailController.text.trim(),
+      password: _passwordController.text,
+    );
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Login successful!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
+    final tempToken = result["tempToken"] as String?;
+    final challengeId = int.tryParse(result["challengeId"].toString());
+
+    if (tempToken == null || challengeId == null) {
+      throw Exception("Invalid response from server");
     }
+
+    if (!mounted) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => OtpScreen(
+          flow: OtpFlow.login2fa,
+          challengeId: challengeId,
+          tempToken: tempToken,
+        ),
+      ),
+    );
+  } catch (e) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(e.toString().replaceFirst("Exception: ", ""))),
+    );
+  } finally {
+    if (mounted) setState(() => _isLoading = false);
   }
+}
+
 
   @override
   Widget build(BuildContext context) {
