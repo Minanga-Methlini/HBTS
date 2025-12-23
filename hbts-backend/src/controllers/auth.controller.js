@@ -76,6 +76,7 @@ export async function passengerVerifySignupOtp(req, res) {
       return res.status(400).json({ message: "Missing challengeId or otp" });
     }
 
+    // get user_id from challenge
     const ch = await pool.query(
       "SELECT user_id FROM otp_challenges WHERE id=$1",
       [challengeId]
@@ -86,23 +87,48 @@ export async function passengerVerifySignupOtp(req, res) {
 
     const userId = ch.rows[0].user_id;
 
+    // verify otp
     await verifyOtp({ challengeId, otp, purpose: "SIGNUP_VERIFY" });
 
+    // mark verified
     await pool.query(
       "UPDATE users SET is_verified=true, email_verified_at=now(), updated_at=now() WHERE user_id=$1",
       [userId]
     );
 
-    return res.json({ message: "Account verified successfully" });
+    // issue tokens (same as login verify)
+    const userRes = await pool.query(
+      "SELECT user_id, name, email, phone, role_id FROM users WHERE user_id=$1",
+      [userId]
+    );
+    const user = userRes.rows[0];
+
+    const accessToken = signAccessToken(user);
+    const refreshToken = signRefreshToken(user.user_id);
+
+    const tokenHash = await bcrypt.hash(refreshToken, 10);
+    await pool.query(
+      `INSERT INTO refresh_tokens (user_id, token_hash, expires_at)
+       VALUES ($1, $2, now() + interval '30 days')`,
+      [user.user_id, tokenHash]
+    );
+
+    return res.json({
+      message: "Account verified successfully",
+      accessToken,
+      refreshToken,
+      user,
+    });
   } catch (e) {
     return res.status(400).json({ message: e.message });
   }
 }
 
-/* =========================
-   PASSENGER LOGIN (STEP 1)
+
+/* 
+   PASSENGER LOGIN 
    email+password -> OTP + tempToken
-========================= */
+ */
 
 export async function passengerLogin(req, res) {
   try {
@@ -153,10 +179,10 @@ export async function passengerLogin(req, res) {
   }
 }
 
-/* =========================
+/*
    PASSENGER LOGIN (STEP 2)
    verify OTP -> access + refresh tokens
-========================= */
+*/
 
 export async function passengerVerifyLoginOtp(req, res) {
   try {
