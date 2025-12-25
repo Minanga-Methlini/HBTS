@@ -2,6 +2,13 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class TokenStore {
   static const _storage = FlutterSecureStorage();
+  
+  
+  // Read access token
+static Future<String?> getAccessToken() async {
+  return await _storage.read(key: "accessToken");
+}
+
 
   //Save access & refresh tokens
   static Future<void> saveTokens({
@@ -11,6 +18,7 @@ class TokenStore {
     await _storage.write(key: "accessToken", value: accessToken);
     await _storage.write(key: "refreshToken", value: refreshToken);
   }
+  
 
   // Save role (ADMIN / PASSENGER / etc.)
   static Future<void> saveRole(String role) async {
