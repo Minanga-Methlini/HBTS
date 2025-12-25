@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import '../services/token_store.dart';
 import '/screens/login_page.dart';
+import 'customers_dashboard.dart';
+import 'drivers_dashboard.dart';
+import 'operators_dashboard.dart';
+import 'reports_dashboard.dart';
+
 
 class AdminDashboard extends StatelessWidget {
   const AdminDashboard({super.key});
@@ -55,12 +60,33 @@ class AdminDashboard extends StatelessWidget {
               crossAxisCount: 2,
               crossAxisSpacing: 12,
               mainAxisSpacing: 12,
-              children: [
-                _adminCard(Icons.people, "Manage Users"),
-                _adminCard(Icons.directions_bus, "Manage Drivers"),
-                _adminCard(Icons.map, "Trips"),
-                _adminCard(Icons.analytics, "Reports"),
-              ],
+             children: [
+  _adminCard(
+    context,
+    Icons.people,
+    "Customers",
+    const CustomersDashboard(),
+  ),
+  _adminCard(
+    context,
+    Icons.directions_bus,
+    "Drivers",
+    const DriversDashboard(),
+  ),
+  _adminCard(
+    context,
+    Icons.support_agent,
+    "Operators",
+    const OperatorsDashboard(),
+  ),
+  _adminCard(
+    context,
+    Icons.analytics,
+    "Reports",
+    const ReportsDashboard(),
+  ),
+],
+
             ),
           ),
         );
@@ -68,10 +94,25 @@ class AdminDashboard extends StatelessWidget {
     );
   }
 
-  Widget _adminCard(IconData icon, String title) {
-    return Card(
+ Widget _adminCard(
+  BuildContext context,
+  IconData icon,
+  String title,
+  Widget page,
+) {
+  return InkWell(
+    borderRadius: BorderRadius.circular(12),
+    onTap: () {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => page),
+      );
+    },
+    child: Card(
       elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -82,6 +123,7 @@ class AdminDashboard extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }

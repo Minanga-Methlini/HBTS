@@ -1,5 +1,6 @@
 import bcrypt from "bcrypt";
 import { pool } from "../db.js";
+import jwt from "jsonwebtoken";
 import { createOtp, verifyOtp } from "../services/otp.service.js";
 import {
   signTempToken,
@@ -322,19 +323,23 @@ export const adminVerifyLoginOtp = async (req, res) => {
 
   const admin = result.rows[0];
 
-  //  Double safety check
+  // Double safety check
   if (admin.role !== "admin") {
     return res.status(403).json({ message: "Access denied" });
   }
 
+  // ✅ CREATE ACCESS TOKEN (ONLY ONCE, CORRECT PAYLOAD)
   const accessToken = jwt.sign(
-    { userId: admin.id, role: admin.role },
+    {
+      sub: admin.id,       // 🔥 MUST be sub
+      role: admin.role,    // 🔥 MUST be "admin"
+    },
     process.env.JWT_ACCESS_SECRET,
     { expiresIn: process.env.ACCESS_TOKEN_EXPIRES_IN }
   );
 
   const refreshToken = jwt.sign(
-    { userId: admin.id },
+    { sub: admin.id },
     process.env.JWT_REFRESH_SECRET,
     { expiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN }
   );
@@ -345,4 +350,3 @@ export const adminVerifyLoginOtp = async (req, res) => {
     role: admin.role,
   });
 };
-
