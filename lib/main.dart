@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'screens/login_page.dart';
+import 'screens/home_page.dart';
 import 'admin/dashboard.dart';
-import 'admin/home.dart';
+import 'services/token_store.dart';
 
 void main() {
   runApp(const HBTSApp());
@@ -10,15 +11,45 @@ void main() {
 class HBTSApp extends StatelessWidget {
   const HBTSApp({super.key});
 
+  // 🔍 Decide start screen
+  Future<Widget> _getStartPage() async {
+    final role = await TokenStore.getRole();
+
+    if (role == null) {
+      return const LoginScreen();
+    }
+
+    if (role == "admin") {
+      return const AdminDashboard();
+    }
+
+    return const HomePage();
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      debugShowCheckedModeBanner: false,
       title: 'HBTS',
       theme: ThemeData(
         primarySwatch: Colors.blue,
+        
       ),
-      home: LoginScreen(),
+      home: FutureBuilder<Widget>(
+        future: _getStartPage(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
+          }
+
+          if (snapshot.hasError) {
+            return const LoginScreen();
+          }
+
+          return snapshot.data!;
+        },
+      ),
     );
   }
 }
