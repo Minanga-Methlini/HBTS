@@ -23,10 +23,10 @@ router.post(
 
 // ADMIN ROUTES
 router.post("/admin/login", adminLogin);
-router.post(
-  "/admin/login/verify-otp",
+router.post("/admin/login/verify-otp", 
+
   requireTempToken,
   adminVerifyLoginOtp
-);
 
+);  
 export default router;
