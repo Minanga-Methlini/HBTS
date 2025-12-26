@@ -35,18 +35,23 @@ class TokenStore {
   }
 
   // ===== ROLE =====
-  static Future<void> saveRole(String role) async {
-    await _storage.write(key: _roleKey, value: role);
-  }
+static Future<void> saveRole(String role) async {
+  await _storage.write(
+    key: _roleKey,
+    value: role.trim().toLowerCase(),
+  );
+}
+
 
   static Future<String?> getRole() async {
     return await _storage.read(key: _roleKey);
   }
 
   static Future<bool> isAdmin() async {
-    final role = await getRole();
-    return role == "admin";
-  }
+  final role = (await getRole())?.trim().toLowerCase();
+  return role != null && role.contains("admin");
+}
+
 
   // ===== AUTH STATE =====
   static Future<bool> isLoggedIn() async {
