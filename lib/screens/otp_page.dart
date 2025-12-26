@@ -2,14 +2,19 @@ import 'package:flutter/material.dart';
 import '../services/auth_api.dart';
 import '../services/token_store.dart';
 import 'home_page.dart';
-import '/admin/dashboard.dart';
+import '../admin/dashboard.dart';
 
-enum OtpFlow { signupVerify, login2fa }
+/// OTP flow types
+enum OtpFlow {
+  signupVerify,      // Passenger signup OTP
+  passengerLogin2fa, // Passenger login OTP
+  adminLogin2fa,     // ✅ Admin login OTP
+}
 
 class OtpScreen extends StatefulWidget {
   final OtpFlow flow;
   final int challengeId;
-  final String? tempToken; // only for login
+  final String? tempToken;
 
   const OtpScreen({
     super.key,
@@ -35,8 +40,8 @@ class _OtpScreenState extends State<OtpScreen> {
   Future<void> _verify() async {
     final otp = _otpController.text.trim();
 
-    // ✅ Strong OTP validation
-    if (otp.isEmpty || otp.length != 6) {
+    // ✅ OTP validation
+    if (otp.length != 6) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Enter a valid 6-digit OTP")),
       );
@@ -48,53 +53,62 @@ class _OtpScreenState extends State<OtpScreen> {
     try {
       Map<String, dynamic> result;
 
-      // 🔹 SIGNUP OTP VERIFY
+      // =======================
+      // OTP VERIFICATION LOGIC
+      // =======================
+
       if (widget.flow == OtpFlow.signupVerify) {
+        // Passenger signup OTP
         result = await AuthApi.verifySignupOtp(
           challengeId: widget.challengeId,
           otp: otp,
         );
-      }
-      // 🔹 LOGIN OTP VERIFY
-      else {
+      } else {
         if (widget.tempToken == null) {
-          throw Exception("Missing temp token. Please login again.");
+          throw Exception("Session expired. Please login again.");
         }
 
-        result = await AuthApi.verifyLoginOtp(
-          tempToken: widget.tempToken!,
-          challengeId: widget.challengeId,
-          otp: otp,
-        );
+        // Passenger or Admin login OTP
+        if (widget.flow == OtpFlow.adminLogin2fa) {
+          result = await AuthApi.verifyAdminLoginOtp(
+            tempToken: widget.tempToken!,
+            challengeId: widget.challengeId,
+            otp: otp,
+          );
+        } else {
+          result = await AuthApi.verifyLoginOtp(
+            tempToken: widget.tempToken!,
+            challengeId: widget.challengeId,
+            otp: otp,
+          );
+        }
       }
 
-      // 🔐 Extract values safely
-      final accessToken = result["accessToken"] as String?;
-      final refreshToken = result["refreshToken"] as String?;
-      final role = result["role"] as String?;
+      // =======================
+      // SAVE TOKENS & ROLE
+      // =======================
+      final accessToken = result["accessToken"];
+      final refreshToken = result["refreshToken"];
+      final role = result["role"];
 
       if (accessToken == null || refreshToken == null || role == null) {
         throw Exception("Invalid authentication response");
       }
 
-      // 🔐 SAVE TOKENS (CRITICAL)
       await TokenStore.saveTokens(
         accessToken: accessToken,
         refreshToken: refreshToken,
       );
-
-      // 🔐 SAVE ROLE
       await TokenStore.saveRole(role);
 
-      // 🔎 VERIFY TOKEN SAVED (prevents 403)
-      final storedToken = await TokenStore.getAccessToken();
-      if (storedToken == null) {
-        throw Exception("Failed to save access token");
-      }
+      // 🔍 DEBUG (can remove later)
+      await TokenStore.debugPrintTokens();
 
       if (!mounted) return;
 
-      // 🧭 ROLE-BASED NAVIGATION
+      // =======================
+      // ROLE-BASED NAVIGATION
+      // =======================
       if (role == "admin") {
         Navigator.pushAndRemoveUntil(
           context,
@@ -110,18 +124,11 @@ class _OtpScreenState extends State<OtpScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            e.toString().replaceFirst("Exception: ", ""),
-          ),
-        ),
+        SnackBar(content: Text(e.toString().replaceFirst("Exception: ", ""))),
       );
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -162,7 +169,7 @@ class _OtpScreenState extends State<OtpScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    "Enter the 6-digit code sent to your email/phone",
+                    "Enter the 6-digit code sent to your email or phone",
                     style: TextStyle(
                       fontSize: 16,
                       color: Colors.grey.shade600,
@@ -176,10 +183,8 @@ class _OtpScreenState extends State<OtpScreen> {
                     decoration: InputDecoration(
                       labelText: "OTP",
                       hintText: "123456",
-                      prefixIcon: Icon(
-                        Icons.lock_outline,
-                        color: Colors.blue.shade700,
-                      ),
+                      prefixIcon: Icon(Icons.lock_outline,
+                          color: Colors.blue.shade700),
                       filled: true,
                       fillColor: Colors.blue.shade50,
                       border: OutlineInputBorder(

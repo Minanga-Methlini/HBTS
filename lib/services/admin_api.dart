@@ -1,36 +1,39 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../config.dart';
-import 'token_store.dart';
+
+import 'token_store.dart'; // adjust path if needed
 
 class AdminApi {
-  // =======================
-  // INTERNAL AUTH HEADER
-  // =======================
-static Future<Map<String, String>> _authHeaders() async {
-  final token = await TokenStore.getAccessToken();
+  // 🔗 Backend base URL
+  static const String baseUrl = "http://10.0.2.2:4000";
+   //static const String baseUrl = "http://localhost:4000";  //Chrome emulator local
 
-  // 🔍 DEBUG: CHECK IF TOKEN EXISTS
-  print("ADMIN API TOKEN: $token");
+  // =======================
+  // AUTH HEADERS
+  // =======================
+  static Future<Map<String, String>> _headers() async {
+    final token = await TokenStore.getAccessToken();
 
-  if (token == null || token.isEmpty) {
-    throw Exception("Not authenticated. Please login again.");
+    if (token == null || token.isEmpty) {
+      throw Exception("Not authenticated. Please login again.");
+    }
+
+    return {
+      "Authorization": "Bearer $token",
+      "Content-Type": "application/json",
+    };
   }
 
-  return {
-    "Authorization": "Bearer $token",
-    "Content-Type": "application/json",
-  };
-}
-
   // =======================
-  // GET ALL CUSTOMERS
+  // GET PASSENGERS (SEARCH)
+  // GET /admin/passengers?search=
   // =======================
-  static Future<List<dynamic>> fetchCustomers() async {
-    final response = await http.get(
-      Uri.parse("${AppConfig.baseUrl}/api/admin/customers"),
-      headers: await _authHeaders(),
+  static Future<List<dynamic>> getPassengers(String search) async {
+    final uri = Uri.parse(
+      "$baseUrl/admin/passengers?search=${Uri.encodeQueryComponent(search)}",
     );
+
+    final response = await http.get(uri, headers: await _headers());
 
     if (response.statusCode == 401 || response.statusCode == 403) {
       throw Exception("Access denied. Admin login required.");
@@ -38,7 +41,7 @@ static Future<Map<String, String>> _authHeaders() async {
 
     if (response.statusCode != 200) {
       throw Exception(
-        "Failed to load customers (${response.statusCode})",
+        "Failed to load passengers (${response.statusCode})",
       );
     }
 
@@ -47,12 +50,12 @@ static Future<Map<String, String>> _authHeaders() async {
 
   // =======================
   // GET CUSTOMER DETAILS
+  // GET /admin/passengers/:id
   // =======================
   static Future<Map<String, dynamic>> fetchCustomerDetails(int userId) async {
-    final response = await http.get(
-      Uri.parse("${AppConfig.baseUrl}/api/admin/customers/$userId"),
-      headers: await _authHeaders(),
-    );
+    final uri = Uri.parse("$baseUrl/admin/passengers/$userId");
+
+    final response = await http.get(uri, headers: await _headers());
 
     if (response.statusCode == 401 || response.statusCode == 403) {
       throw Exception("Access denied. Admin login required.");
@@ -69,14 +72,13 @@ static Future<Map<String, String>> _authHeaders() async {
 
   // =======================
   // GET CUSTOMER BOOKINGS
+  // GET /admin/passengers/:id/bookings
   // =======================
   static Future<List<dynamic>> fetchCustomerBookings(int userId) async {
-    final response = await http.get(
-      Uri.parse(
-        "${AppConfig.baseUrl}/api/admin/customers/$userId/bookings",
-      ),
-      headers: await _authHeaders(),
-    );
+    final uri =
+        Uri.parse("$baseUrl/admin/passengers/$userId/bookings");
+
+    final response = await http.get(uri, headers: await _headers());
 
     if (response.statusCode == 401 || response.statusCode == 403) {
       throw Exception("Access denied. Admin login required.");

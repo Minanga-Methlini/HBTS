@@ -1,47 +1,38 @@
-import { fileURLToPath } from "url";
-import { dirname } from "path";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-console.log("BACKEND ENTRY FILE:", __filename);
-
-
 import express from "express";
-import cors from "cors";
 import dotenv from "dotenv";
+import cors from "cors";
 
 import authRoutes from "./routes/auth.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
 
 dotenv.config();
 
-const app = express();
+const app = express(); // ✅ app FIRST
 
-// ✅ CORS — MUST be before routes
-app.use(
-  cors({
-    origin: true,
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
-
-// ✅ THIS LINE IS REQUIRED FOR FLUTTER WEB
-app.options("*", cors());
-
+// =======================
+// MIDDLEWARE
+// =======================
+app.use(cors());
 app.use(express.json());
 
-// Routes
-app.use("/api/auth", authRoutes);
-app.use("/api/admin", adminRoutes);
+// =======================
+// ROUTES
+// =======================
+app.use("/auth", authRoutes);
+app.use("/admin", adminRoutes);
 
-app.get("/health", (req, res) => {
-  res.json({ ok: true });
+// =======================
+// HEALTH CHECK
+// =======================
+app.get("/", (req, res) => {
+  res.send("HBTS Backend is running");
 });
 
+// =======================
+// SERVER START
+// =======================
 const PORT = process.env.PORT || 4000;
+
 app.listen(PORT, () => {
-  console.log(`API running on port ${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
 });
