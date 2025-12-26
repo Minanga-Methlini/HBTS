@@ -265,88 +265,103 @@ export async function passengerVerifyLoginOtp(req, res) {
 // ADMIN LOGIN
 
 export const adminLogin = async (req, res) => {
-  const { email, password } = req.body;
+  try {
+    const { email, password } = req.body;
 
-  const result = await db.query(
-    `
-    SELECT u.id, u.password, r.name AS role
-    FROM users u
-    JOIN roles r ON u.role_id = r.id
-    WHERE u.email = $1
-    `,
-    [email]
-  );
+    const result = await pool.query(
+      `
+      SELECT u.user_id, u.password_hash, r.role_name
+      FROM users u
+      JOIN roles r ON u.role_id = r.role_id
+      WHERE u.email = $1
+      `,
+      [email.trim()]
+    );
 
-  if (!result.rows.length) {
-    return res.status(401).json({ message: "Invalid credentials" });
+    if (!result.rows.length) {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
+
+    const admin = result.rows[0];
+
+    // Only admins allowed
+    if (admin.role_name !== "admin") {
+      return res.status(403).json({ message: "Admin access only" });
+    }
+
+    const match = await bcrypt.compare(password, admin.password_hash);
+    if (!match) {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
+
+    const otpData = await createOtp({
+      userId: admin.user_id,
+      email,
+      purpose: "LOGIN_2FA",
+    });
+
+    const tempToken = signTempToken(admin.user_id);
+
+    res.json({
+      message: "OTP sent",
+      challengeId: otpData.challengeId,
+      tempToken,
+      expiresAt: otpData.expiresAt,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
-
-  const user = result.rows[0];
-
-  //  Only admins allowed
-  if (user.role !== "admin") {
-    return res.status(403).json({ message: "Admin access only" });
-  }
-
-  const match = await bcrypt.compare(password, user.password);
-  if (!match) {
-    return res.status(401).json({ message: "Invalid credentials" });
-  }
-
-  // send OTP
-  await sendOtp(email);
-
-  res.json({ message: "OTP sent" });
 };
-
 
 
 
 // ADMIN VERIFY LOGIN OTP
 
 export const adminVerifyLoginOtp = async (req, res) => {
-  const adminId = req.user.id;
+  try {
+    const { challengeId, otp } = req.body;
+    const adminId = req.userId; // from requireTempToken middleware
 
-  const result = await db.query(
-    `
-    SELECT u.id, r.name AS role
-    FROM users u
-    JOIN roles r ON u.role_id = r.id
-    WHERE u.id = $1
-    `,
-    [adminId]
-  );
+    if (!challengeId || !otp) {
+      return res.status(400).json({ message: "Missing challengeId or otp" });
+    }
 
-  if (!result.rows.length) {
-    return res.status(404).json({ message: "Admin not found" });
+    await verifyOtp({ challengeId, otp, purpose: "LOGIN_2FA" });
+
+    const result = await pool.query(
+      `
+      SELECT u.user_id, r.role_name
+      FROM users u
+      JOIN roles r ON u.role_id = r.role_id
+      WHERE u.user_id = $1
+      `,
+      [adminId]
+    );
+
+    if (!result.rows.length) {
+      return res.status(404).json({ message: "Admin not found" });
+    }
+
+    const admin = result.rows[0];
+
+    if (admin.role_name !== "admin") {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    // ✅ USE YOUR EXISTING TOKEN SERVICE
+    const accessToken = signAccessToken({
+      user_id: admin.user_id,
+      role: admin.role_name,
+    });
+
+    const refreshToken = signRefreshToken(admin.user_id);
+
+    res.json({
+      accessToken,
+      refreshToken,
+      role: admin.role_name,
+    });
+  } catch (err) {
+    res.status(400).json({ message: err.message });
   }
-
-  const admin = result.rows[0];
-
-  // Double safety check
-  if (admin.role !== "admin") {
-    return res.status(403).json({ message: "Access denied" });
-  }
-
-  // ✅ CREATE ACCESS TOKEN (ONLY ONCE, CORRECT PAYLOAD)
-  const accessToken = jwt.sign(
-    {
-      sub: admin.id,       // 🔥 MUST be sub
-      role: admin.role,    // 🔥 MUST be "admin"
-    },
-    process.env.JWT_ACCESS_SECRET,
-    { expiresIn: process.env.ACCESS_TOKEN_EXPIRES_IN }
-  );
-
-  const refreshToken = jwt.sign(
-    { sub: admin.id },
-    process.env.JWT_REFRESH_SECRET,
-    { expiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN }
-  );
-
-  res.json({
-    accessToken,
-    refreshToken,
-    role: admin.role,
-  });
 };

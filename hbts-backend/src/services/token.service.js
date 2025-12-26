@@ -10,11 +10,16 @@ export function signTempToken(userId) {
 
 export function signAccessToken(user) {
   return jwt.sign(
-    { sub: user.user_id, role_id: user.role_id, type: "ACCESS" },
+    {
+      sub: user.user_id,
+      role: user.role,        // ✅ THIS IS THE KEY FIX
+      type: "ACCESS",
+    },
     process.env.JWT_ACCESS_SECRET,
     { expiresIn: process.env.ACCESS_TOKEN_EXPIRES_IN || "15m" }
   );
 }
+
 
 export function signRefreshToken(userId) {
   return jwt.sign(
