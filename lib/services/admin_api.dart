@@ -5,8 +5,8 @@ import 'token_store.dart'; // adjust path if needed
 
 class AdminApi {
   // 🔗 Backend base URL
-  static const String baseUrl = "http://10.0.2.2:4000";
-   //static const String baseUrl = "http://localhost:4000";  //Chrome emulator local
+  //static const String baseUrl = "http://10.0.2.2:4000";
+   static const String baseUrl = "http://localhost:4000";  //Chrome emulator local
 
   // =======================
   // AUTH HEADERS

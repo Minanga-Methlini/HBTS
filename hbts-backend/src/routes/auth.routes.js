@@ -7,7 +7,7 @@ import {
   adminLogin,
   adminVerifyLoginOtp
 } from "../controllers/auth.controller.js";
-import { requireTempToken } from "../middleware/tempAuth.js";
+import { requireTempToken } from "../middleware/tempAuth.middleware.js";
 
 const router = Router();
 
