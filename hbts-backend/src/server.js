@@ -1,3 +1,12 @@
+import { fileURLToPath } from "url";
+import { dirname } from "path";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+console.log("BACKEND ENTRY FILE:", __filename);
+
+
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";

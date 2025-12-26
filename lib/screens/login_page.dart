@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'signup_page.dart';
 import '../services/auth_api.dart';
+import '../services/token_store.dart';
 import 'otp_page.dart';
+import 'home_page.dart';
+import '/admin/dashboard.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -16,6 +19,32 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkExistingLogin();
+  }
+
+  Future<void> _checkExistingLogin() async {
+    final loggedIn = await TokenStore.isLoggedIn();
+    if (!loggedIn) return;
+
+    final isAdmin = await TokenStore.isAdmin();
+    if (!mounted) return;
+
+    if (isAdmin) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const AdminDashboard()),
+      );
+    } else {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const HomePage()),
+      );
+    }
+  }
 
   @override
   void dispose() {
@@ -36,7 +65,9 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       final tempToken = result["tempToken"] as String?;
-      final challengeId = int.tryParse(result["challengeId"].toString());
+      final challengeId = int.tryParse(
+        result["challengeId"].toString(),
+      );
 
       if (tempToken == null || challengeId == null) {
         throw Exception("Invalid response from server");
@@ -111,7 +142,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 40),
-
                     // EMAIL
                     TextFormField(
                       controller: _emailController,
@@ -132,9 +162,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         return null;
                       },
                     ),
-
                     const SizedBox(height: 20),
-
                     // PASSWORD
                     TextFormField(
                       controller: _passwordController,
@@ -165,9 +193,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         return null;
                       },
                     ),
-
                     const SizedBox(height: 24),
-
                     SizedBox(
                       width: double.infinity,
                       height: 56,
@@ -177,13 +203,14 @@ class _LoginScreenState extends State<LoginScreen> {
                             ? const CircularProgressIndicator(color: Colors.white)
                             : const Text(
                                 'Login',
-                                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                       ),
                     ),
-
                     const SizedBox(height: 24),
-
                     Center(
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -193,7 +220,9 @@ class _LoginScreenState extends State<LoginScreen> {
                             onPressed: () {
                               Navigator.pushReplacement(
                                 context,
-                                MaterialPageRoute(builder: (_) => const SignupScreen()),
+                                MaterialPageRoute(
+                                  builder: (_) => const SignupScreen(),
+                                ),
                               );
                             },
                             child: const Text('Sign Up'),

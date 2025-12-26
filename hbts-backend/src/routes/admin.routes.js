@@ -8,15 +8,31 @@ router.get("/customers", requireAuth, async (req, res) => {
   try {
     // 🔐 Admin-only access
     if (req.user.role !== "admin") {
-      return res.status(403).json({ message: "Forbidden" });
-    }
+  return res.status(403).json({ message: "Admin login required" });
+}
 
-    const result = await pool.query(
-      `SELECT user_id, name, email, phone, created_at, bookings
-       FROM users
-       WHERE role = 'passenger'
-       ORDER BY created_at DESC`
-    );
+
+    const result = await pool.query(`
+  SELECT
+    u.user_id,
+    u.name,
+    u.email,
+    u.phone,
+    r.role_name AS role,
+    COUNT(b.booking_id) AS bookings_count
+  FROM users u
+  JOIN roles r ON u.role_id = r.role_id
+  LEFT JOIN bookings b ON b.user_id = u.user_id
+  WHERE r.role_name = 'passenger'
+  GROUP BY u.user_id, r.role_name
+  ORDER BY u.user_id DESC
+
+  
+`);
+
+
+
+
 
     res.json(result.rows);
   } catch (err) {

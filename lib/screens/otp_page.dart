@@ -35,9 +35,10 @@ class _OtpScreenState extends State<OtpScreen> {
   Future<void> _verify() async {
     final otp = _otpController.text.trim();
 
-    if (otp.length != 6) {
+    // ✅ Strong OTP validation
+    if (otp.isEmpty || otp.length != 6) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Enter the 6-digit OTP")),
+        const SnackBar(content: Text("Enter a valid 6-digit OTP")),
       );
       return;
     }
@@ -56,25 +57,27 @@ class _OtpScreenState extends State<OtpScreen> {
       }
       // 🔹 LOGIN OTP VERIFY
       else {
-        final temp = widget.tempToken;
-        if (temp == null) throw Exception("Missing temp token");
+        if (widget.tempToken == null) {
+          throw Exception("Missing temp token. Please login again.");
+        }
 
         result = await AuthApi.verifyLoginOtp(
-          tempToken: temp,
+          tempToken: widget.tempToken!,
           challengeId: widget.challengeId,
           otp: otp,
         );
       }
 
+      // 🔐 Extract values safely
       final accessToken = result["accessToken"] as String?;
       final refreshToken = result["refreshToken"] as String?;
       final role = result["role"] as String?;
 
       if (accessToken == null || refreshToken == null || role == null) {
-        throw Exception("Invalid auth response from server");
+        throw Exception("Invalid authentication response");
       }
 
-      // 🔐 SAVE TOKENS
+      // 🔐 SAVE TOKENS (CRITICAL)
       await TokenStore.saveTokens(
         accessToken: accessToken,
         refreshToken: refreshToken,
@@ -82,6 +85,12 @@ class _OtpScreenState extends State<OtpScreen> {
 
       // 🔐 SAVE ROLE
       await TokenStore.saveRole(role);
+
+      // 🔎 VERIFY TOKEN SAVED (prevents 403)
+      final storedToken = await TokenStore.getAccessToken();
+      if (storedToken == null) {
+        throw Exception("Failed to save access token");
+      }
 
       if (!mounted) return;
 
@@ -101,6 +110,7 @@ class _OtpScreenState extends State<OtpScreen> {
       }
     } catch (e) {
       if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -176,17 +186,6 @@ class _OtpScreenState extends State<OtpScreen> {
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,
                       ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.blue.shade100),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(
-                          color: Colors.blue.shade700,
-                          width: 2,
-                        ),
-                      ),
                       counterText: "",
                     ),
                   ),
@@ -199,19 +198,14 @@ class _OtpScreenState extends State<OtpScreen> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.blue.shade700,
                         foregroundColor: Colors.white,
-                        elevation: 4,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
                       child: _isLoading
-                          ? const SizedBox(
-                              height: 24,
-                              width: 24,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
-                              ),
+                          ? const CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
                             )
                           : const Text(
                               "Verify",
