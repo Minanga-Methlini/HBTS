@@ -68,25 +68,30 @@ class _OtpScreenState extends State<OtpScreen> {
         );
       }
 
-      // 🔐 Extract values safely
+      // 🔐 Extract values
       final accessToken = result["accessToken"] as String?;
       final refreshToken = result["refreshToken"] as String?;
-      final role = result["role"] as String?;
+      final rawRole = result["role"] as String?;
 
-      if (accessToken == null || refreshToken == null || role == null) {
+      if (accessToken == null || refreshToken == null || rawRole == null) {
         throw Exception("Invalid authentication response");
       }
 
-      // 🔐 SAVE TOKENS (CRITICAL)
+      // ✅ NORMALIZE ROLE (CRITICAL FIX)
+      final role = rawRole.toLowerCase().contains("admin")
+          ? "admin"
+          : "passenger";
+
+      // 🔐 SAVE TOKENS
       await TokenStore.saveTokens(
         accessToken: accessToken,
         refreshToken: refreshToken,
       );
 
-      // 🔐 SAVE ROLE
+      // 🔐 SAVE NORMALIZED ROLE
       await TokenStore.saveRole(role);
 
-      // 🔎 VERIFY TOKEN SAVED (prevents 403)
+      // 🔎 VERIFY TOKEN SAVED
       final storedToken = await TokenStore.getAccessToken();
       if (storedToken == null) {
         throw Exception("Failed to save access token");
