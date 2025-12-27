@@ -8,6 +8,9 @@ import {
   adminVerifyLoginOtp
 } from "../controllers/auth.controller.js";
 import { requireTempToken } from "../middleware/tempAuth.js";
+import { requireAuth } from "../middleware/auth.middleware.js";
+import { getMe } from "../controllers/me.controller.js";
+
 
 const router = Router();
 
@@ -28,5 +31,6 @@ router.post(
   requireTempToken,
   adminVerifyLoginOtp
 );
+router.get("/me", requireAuth, getMe);
 
 export default router;

@@ -23,12 +23,13 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _initHome() async {
-    // ⏳ IMPORTANT: allow secure storage to finish writing after OTP
+    // (Optional) tiny yield to let storage finish writes in some flows
     await Future.delayed(Duration.zero);
 
     final loggedIn = await TokenStore.isLoggedIn();
     final isAdmin = await TokenStore.isAdmin();
 
+    // Passenger app only; admins go to admin area (or login)
     if (!loggedIn || isAdmin) {
       _goLogin();
       return;
@@ -37,15 +38,22 @@ class _HomePageState extends State<HomePage> {
     try {
       final me = await UserApi.fetchLoggedInUser();
       if (!mounted) return;
-
       setState(() {
         _user = me;
         _loading = false;
       });
-    } catch (_) {
-      await TokenStore.clear();
+    } catch (e) {
+      // Stop infinite spinner + show a message
+      debugPrint("HOME INIT ERROR => $e");
       if (!mounted) return;
-      _goLogin();
+      setState(() {
+        _loading = false;
+        _user = null;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to load profile: $e")),
+      );
     }
   }
 
@@ -88,6 +96,48 @@ class _HomePageState extends State<HomePage> {
       );
     }
 
+    // If loading finished but user is still null, show a safe error UI
+    if (_user == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text("HBTS")),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.wifi_off, size: 48),
+                const SizedBox(height: 12),
+                const Text(
+                  "Couldn't reach server / load profile.",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: _initHome,
+                    child: const Text("Retry"),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: OutlinedButton(
+                    onPressed: _logout,
+                    child: const Text("Logout"),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     final user = _user!;
     final hasPhoto =
         user.profileImage != null && user.profileImage!.trim().isNotEmpty;
@@ -100,31 +150,35 @@ class _HomePageState extends State<HomePage> {
         actions: [
           IconButton(
             tooltip: "Logout",
-            onPressed: _logout,
             icon: const Icon(Icons.logout),
+            onPressed: () async {
+               await _logout();
+            },
           ),
           Padding(
             padding: const EdgeInsets.only(right: 12),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(999),
+            child: GestureDetector(
               onTap: _openProfile,
               child: CircleAvatar(
                 radius: 18,
-                backgroundImage:
-                    hasPhoto ? NetworkImage(user.profileImage!) : null,
+                backgroundImage: hasPhoto
+                  ? NetworkImage(user.profileImage!)
+                  : null,
                 child: !hasPhoto
-                    ? Text(
-                        user.name.isNotEmpty
-                            ? user.name[0].toUpperCase()
-                            : "U",
-                        style:
-                            const TextStyle(fontWeight: FontWeight.bold),
-                      )
-                    : null,
+                  ? Text(
+                    user.name.isNotEmpty
+                      ? user.name[0].toUpperCase()
+                      : "U",
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  )
+                : null,
               ),
             ),
           ),
         ],
+
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -150,8 +204,7 @@ class _HomePageState extends State<HomePage> {
 
           // 🚀 Main Actions
           GridView.count(
-            crossAxisCount:
-                MediaQuery.of(context).size.width > 900 ? 4 : 2,
+            crossAxisCount: MediaQuery.of(context).size.width > 900 ? 4 : 2,
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             mainAxisSpacing: 12,
@@ -161,29 +214,25 @@ class _HomePageState extends State<HomePage> {
                 icon: Icons.schedule,
                 title: "Schedule",
                 subtitle: "Search buses & book seats",
-                onTap: () =>
-                    Navigator.pushNamed(context, AppRoutes.schedule),
+                onTap: () => Navigator.pushNamed(context, AppRoutes.schedule),
               ),
               _ActionCard(
                 icon: Icons.receipt_long,
                 title: "My Bookings",
                 subtitle: "Tickets & history",
-                onTap: () =>
-                    Navigator.pushNamed(context, AppRoutes.myBookings),
+                onTap: () => Navigator.pushNamed(context, AppRoutes.myBookings),
               ),
               _ActionCard(
                 icon: Icons.location_searching,
                 title: "Track My Booking",
                 subtitle: "Track using booking",
-                onTap: () => Navigator.pushNamed(
-                    context, AppRoutes.trackMyBooking),
+                onTap: () => Navigator.pushNamed(context, AppRoutes.trackMyBooking),
               ),
               _ActionCard(
                 icon: Icons.directions_bus,
                 title: "Track a Bus",
                 subtitle: "Without booking",
-                onTap: () =>
-                    Navigator.pushNamed(context, AppRoutes.trackBus),
+                onTap: () => Navigator.pushNamed(context, AppRoutes.trackBus),
               ),
             ],
           ),
