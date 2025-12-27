@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
@@ -5,23 +6,29 @@ import '../models/user_model.dart';
 import 'token_store.dart';
 
 class UserApi {
-  // 🔴 CHANGE this to your backend base URL
-  static const String baseUrl = "http://localhost:8080";
+  // ✅ Android Emulator MUST use this
+  static const String baseUrl = "http://10.0.2.2:4000";
 
-  // 🔴 CHANGE if your endpoint is different
-  static const String profileEndpoint = "/api/users/me";
+  static const String profileEndpoint = "/api/auth/me";
 
   static Future<AppUser> fetchLoggedInUser() async {
-  final token = await TokenStore.getAccessToken();
- // <-- tell me if method name differs
+    final token = await TokenStore.getAccessToken();
 
-    final res = await http.get(
-      Uri.parse("$baseUrl$profileEndpoint"),
-      headers: {
-        "Authorization": "Bearer $token",
-        "Content-Type": "application/json",
-      },
+    print(
+      "ME CALL => $baseUrl$profileEndpoint | token=${token == null ? 'null' : 'present'}",
     );
+
+    final res = await http
+        .get(
+          Uri.parse("$baseUrl$profileEndpoint"),
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+        )
+        .timeout(const Duration(seconds: 10)); // ✅ prevents infinite loading
+
+    print("ME RESP => ${res.statusCode} | ${res.body}");
 
     if (res.statusCode == 200) {
       final json = jsonDecode(res.body);
@@ -33,6 +40,6 @@ class UserApi {
       throw Exception("AUTH_EXPIRED");
     }
 
-    throw Exception("Failed to load user profile");
+    throw Exception("Failed to load user profile (${res.statusCode})");
   }
 }

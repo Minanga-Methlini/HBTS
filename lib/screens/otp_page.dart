@@ -3,6 +3,8 @@ import '../services/auth_api.dart';
 import '../services/token_store.dart';
 import 'home_page.dart';
 import '/admin/dashboard.dart';
+import '../app_routes.dart';
+
 
 enum OtpFlow { signupVerify, login2fa }
 
@@ -101,18 +103,19 @@ class _OtpScreenState extends State<OtpScreen> {
 
       // 🧭 ROLE-BASED NAVIGATION
       if (role == "admin") {
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (_) => const AdminDashboard()),
-          (_) => false,
-        );
-      } else {
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (_) => const HomePage()),
-          (_) => false,
-        );
-      }
+  Navigator.pushAndRemoveUntil(
+    context,
+    MaterialPageRoute(builder: (_) => const AdminDashboard()),
+    (_) => false,
+  );
+} else {
+  Navigator.pushNamedAndRemoveUntil(
+    context,
+    AppRoutes.home,
+    (_) => false,
+  );
+}
+
     } catch (e) {
       if (!mounted) return;
 
