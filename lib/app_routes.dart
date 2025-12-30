@@ -8,6 +8,11 @@ import 'screens/my_bookings_page.dart';
 import 'screens/track_my_booking_page.dart';
 import 'screens/track_bus_page.dart';
 
+import 'screens/trip_details_page.dart';
+import 'screens/seat_selection_page.dart';
+import 'screens/confirm_booking_page.dart';
+import 'screens/booking_success_page.dart';
+
 class AppRoutes {
   static const login = '/login';
   static const home = '/home';
@@ -16,6 +21,11 @@ class AppRoutes {
   static const myBookings = '/my-bookings';
   static const trackMyBooking = '/track-my-booking';
   static const trackBus = '/track-bus';
+
+  static const tripDetails = '/trip-details';
+  static const seatSelect = '/seat-select';
+  static const confirmBooking = '/confirm-booking';
+  static const bookingSuccess = '/booking-success';
 
   static Route<dynamic> onGenerate(RouteSettings settings) {
     switch (settings.name) {
@@ -33,17 +43,47 @@ class AppRoutes {
         return _badRoute("Profile args missing");
 
       case schedule:
-        return MaterialPageRoute(builder: (_) => SchedulePage());
+        return MaterialPageRoute(builder: (_) => const SchedulePage());
 
       case myBookings:
-        return MaterialPageRoute(builder: (_) => MyBookingsPage());
+        return MaterialPageRoute(builder: (_) => const MyBookingsPage());
 
       case trackMyBooking:
-        return MaterialPageRoute(builder: (_) => TrackMyBookingPage());
+        return MaterialPageRoute(builder: (_) => const TrackMyBookingPage());
 
       case trackBus:
-        return MaterialPageRoute(builder: (_) => TrackBusPage());
+        return MaterialPageRoute(builder: (_) => const TrackBusPage());
 
+      // ✅ NEW FLOW ROUTES (must be BEFORE default)
+      case tripDetails:
+        final args = settings.arguments;
+        if (args is TripDetailsArgs) {
+          return MaterialPageRoute(builder: (_) => TripDetailsPage(args: args));
+        }
+        return _badRoute("TripDetails args missing");
+
+      case seatSelect:
+        final args = settings.arguments;
+        if (args is SeatSelectArgs) {
+          return MaterialPageRoute(builder: (_) => SeatSelectionPage(args: args));
+        }
+        return _badRoute("SeatSelect args missing");
+
+      case confirmBooking:
+        final args = settings.arguments;
+        if (args is ConfirmBookingArgs) {
+          return MaterialPageRoute(builder: (_) => ConfirmBookingPage(args: args));
+        }
+        return _badRoute("ConfirmBooking args missing");
+
+      case bookingSuccess:
+        final args = settings.arguments;
+        if (args is BookingSuccessArgs) {
+          return MaterialPageRoute(builder: (_) => BookingSuccessPage(args: args));
+        }
+        return _badRoute("BookingSuccess args missing");
+
+      // ✅ default MUST be last
       default:
         return _badRoute("Route not found: ${settings.name}");
     }
