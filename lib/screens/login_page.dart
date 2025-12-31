@@ -4,7 +4,7 @@ import '../services/auth_api.dart';
 import '../services/token_store.dart';
 import 'otp_page.dart';
 import 'home_page.dart';
-import '/admin/dashboard.dart';
+import '../admin/dashboard.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -17,6 +17,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+
   bool _obscurePassword = true;
   bool _isLoading = false;
 
@@ -26,6 +27,9 @@ class _LoginScreenState extends State<LoginScreen> {
     _checkExistingLogin();
   }
 
+  // =======================
+  // AUTO LOGIN CHECK
+  // =======================
   Future<void> _checkExistingLogin() async {
     final loggedIn = await TokenStore.isLoggedIn();
     if (!loggedIn) return;
@@ -53,6 +57,9 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  // =======================
+  // LOGIN HANDLER
+  // =======================
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -65,22 +72,29 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       final tempToken = result["tempToken"] as String?;
-      final challengeId = int.tryParse(
-        result["challengeId"].toString(),
-      );
+    final challengeIdRaw = result["challengeId"];
+final int challengeId = int.parse(challengeIdRaw.toString());
 
-      if (tempToken == null || challengeId == null) {
+      final role = result["role"]; // 🔥 IMPORTANT
+
+      if (tempToken == null || challengeId == null || role == null) {
         throw Exception("Invalid response from server");
       }
 
       if (!mounted) return;
 
-      // 👉 GO TO OTP SCREEN (NO TOKEN SAVING HERE)
+      // =======================
+      // SELECT OTP FLOW BY ROLE
+      // =======================
+      final otpFlow = role == "admin"
+          ? OtpFlow.adminLogin2fa
+          : OtpFlow.passengerLogin2fa;
+
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (_) => OtpScreen(
-            flow: OtpFlow.login2fa,
+            flow: otpFlow,
             challengeId: challengeId,
             tempToken: tempToken,
           ),
@@ -100,6 +114,9 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  // =======================
+  // UI
+  // =======================
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -142,13 +159,19 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 40),
+
+                    // =======================
                     // EMAIL
+                    // =======================
                     TextFormField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
                       decoration: InputDecoration(
                         labelText: 'Email',
-                        prefixIcon: Icon(Icons.email_outlined, color: Colors.blue.shade700),
+                        prefixIcon: Icon(
+                          Icons.email_outlined,
+                          color: Colors.blue.shade700,
+                        ),
                         filled: true,
                         fillColor: Colors.blue.shade50,
                         border: OutlineInputBorder(
@@ -157,19 +180,30 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                       validator: (value) {
-                        if (value == null || value.isEmpty) return 'Please enter your email';
-                        if (!value.contains('@')) return 'Please enter a valid email';
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter your email';
+                        }
+                        if (!value.contains('@')) {
+                          return 'Please enter a valid email';
+                        }
                         return null;
                       },
                     ),
+
                     const SizedBox(height: 20),
+
+                    // =======================
                     // PASSWORD
+                    // =======================
                     TextFormField(
                       controller: _passwordController,
                       obscureText: _obscurePassword,
                       decoration: InputDecoration(
                         labelText: 'Password',
-                        prefixIcon: Icon(Icons.lock_outline, color: Colors.blue.shade700),
+                        prefixIcon: Icon(
+                          Icons.lock_outline,
+                          color: Colors.blue.shade700,
+                        ),
                         suffixIcon: IconButton(
                           icon: Icon(
                             _obscurePassword
@@ -177,7 +211,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                 : Icons.visibility_off_outlined,
                           ),
                           onPressed: () {
-                            setState(() => _obscurePassword = !_obscurePassword);
+                            setState(
+                              () => _obscurePassword = !_obscurePassword,
+                            );
                           },
                         ),
                         filled: true,
@@ -188,19 +224,37 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                       validator: (value) {
-                        if (value == null || value.isEmpty) return 'Please enter your password';
-                        if (value.length < 6) return 'Password must be at least 6 characters';
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter your password';
+                        }
+                        if (value.length < 6) {
+                          return 'Password must be at least 6 characters';
+                        }
                         return null;
                       },
                     ),
+
                     const SizedBox(height: 24),
+
+                    // =======================
+                    // LOGIN BUTTON
+                    // =======================
                     SizedBox(
                       width: double.infinity,
                       height: 56,
                       child: ElevatedButton(
                         onPressed: _isLoading ? null : _handleLogin,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue.shade700,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
                         child: _isLoading
-                            ? const CircularProgressIndicator(color: Colors.white)
+                            ? const CircularProgressIndicator(
+                                color: Colors.white,
+                              )
                             : const Text(
                                 'Login',
                                 style: TextStyle(
@@ -210,7 +264,12 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                       ),
                     ),
+
                     const SizedBox(height: 24),
+
+                    // =======================
+                    // SIGNUP LINK
+                    // =======================
                     Center(
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
