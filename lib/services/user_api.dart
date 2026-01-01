@@ -7,7 +7,7 @@ import 'token_store.dart';
 
 class UserApi {
   // ✅ Android Emulator MUST use this
-  static const String baseUrl = "http://10.0.2.2:4000";
+  static const String baseUrl = "http://localhost:4000";
 
   static const String profileEndpoint = "/api/auth/me";
 
