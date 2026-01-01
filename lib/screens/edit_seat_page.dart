@@ -1,35 +1,37 @@
 import 'package:flutter/material.dart';
-import '../app_routes.dart';
 import '../api/seat_api.dart';
 import '../models/seat_model.dart';
 import '../models/trip_model.dart';
-import 'confirm_booking_page.dart';
 
-class SeatSelectArgs {
+class EditSeatArgs {
   final Trip trip;
-  final int passengers;
-  SeatSelectArgs({required this.trip, required this.passengers});
+  final int currentSeatId;
+  final String currentSeatLabel;
+
+  const EditSeatArgs({
+    required this.trip,
+    required this.currentSeatId,
+    required this.currentSeatLabel,
+  });
 }
 
-class SeatSelectionPage extends StatefulWidget {
-  final SeatSelectArgs args;
-  const SeatSelectionPage({super.key, required this.args});
+class EditSeatPage extends StatefulWidget {
+  final EditSeatArgs args;
+  const EditSeatPage({super.key, required this.args});
 
   @override
-  State<SeatSelectionPage> createState() => _SeatSelectionPageState();
+  State<EditSeatPage> createState() => _EditSeatPageState();
 }
 
-class _SeatSelectionPageState extends State<SeatSelectionPage> {
+class _EditSeatPageState extends State<EditSeatPage> {
   bool _loading = true;
   List<Seat> _seats = [];
-
-  final Set<int> _selectedSeatIds = {};
-
-  int get _maxSelect => widget.args.passengers;
+  int? _selectedSeatId;
 
   @override
   void initState() {
     super.initState();
+    _selectedSeatId = widget.args.currentSeatId;
     _loadSeats();
   }
 
@@ -37,49 +39,57 @@ class _SeatSelectionPageState extends State<SeatSelectionPage> {
     setState(() => _loading = true);
     try {
       final data = await SeatApi.getTripSeats(widget.args.trip.id);
-      setState(() {
-        _seats = data;
-      });
+
+      // allow selecting the current seat even if API marks it booked
+      final updated = data.map((s) {
+        if (s.seatId == widget.args.currentSeatId) {
+          return Seat(
+            seatId: s.seatId,
+            seatLabel: s.seatLabel,
+            seatRow: s.seatRow,
+            seatCol: s.seatCol,
+            seatType: s.seatType,
+            isBooked: false,
+          );
+        }
+        return s;
+      }).toList();
+
+      setState(() => _seats = updated);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Seat load failed: $e")));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text("Seat load failed: $e")));
       }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
 
-  void _toggle(Seat seat) {
+  void _select(Seat seat) {
     if (seat.isBooked) return;
-
-    setState(() {
-      if (_selectedSeatIds.contains(seat.seatId)) {
-        _selectedSeatIds.remove(seat.seatId);
-      } else {
-        if (_selectedSeatIds.length >= _maxSelect) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("You can select only $_maxSelect seat(s).")),
-          );
-          return;
-        }
-        _selectedSeatIds.add(seat.seatId);
-      }
-    });
+    setState(() => _selectedSeatId = seat.seatId);
   }
 
   @override
   Widget build(BuildContext context) {
     final t = widget.args.trip;
 
-    // Build a grid size from max row/col
     final maxRow = _seats.isEmpty ? 0 : _seats.map((s) => s.seatRow).reduce((a, b) => a > b ? a : b);
     final maxCol = _seats.isEmpty ? 0 : _seats.map((s) => s.seatCol).reduce((a, b) => a > b ? a : b);
 
-    final totalSeats = _selectedSeatIds.length;
+    final seatByPos = <String, Seat>{};
+    for (final s in _seats) {
+      seatByPos["${s.seatRow}:${s.seatCol}"] = s;
+    }
+
+    final rows = maxRow;
+    final cols = maxCol == 0 ? 4 : maxCol;
+    final totalCells = rows * cols;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Select Seats"),
+        title: const Text("Change Seat"),
         backgroundColor: Colors.blue.shade700,
         foregroundColor: Colors.white,
       ),
@@ -87,13 +97,24 @@ class _SeatSelectionPageState extends State<SeatSelectionPage> {
         children: [
           Padding(
             padding: const EdgeInsets.all(14),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _Legend(color: Colors.grey.shade300, label: "Available"),
-                const SizedBox(width: 10),
-                _Legend(color: Colors.blue.shade700, label: "Selected"),
-                const SizedBox(width: 10),
-                _Legend(color: Colors.red.shade300, label: "Booked"),
+                Text("${t.fromLocation} → ${t.toLocation}",
+                    style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
+                const SizedBox(height: 6),
+                Text("Current seat: ${widget.args.currentSeatLabel}",
+                    style: TextStyle(color: Colors.grey.shade700)),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    _Legend(color: Colors.grey.shade300, label: "Available"),
+                    const SizedBox(width: 10),
+                    _Legend(color: Colors.blue.shade700, label: "Selected"),
+                    const SizedBox(width: 10),
+                    _Legend(color: Colors.red.shade300, label: "Booked"),
+                  ],
+                ),
               ],
             ),
           ),
@@ -107,10 +128,7 @@ class _SeatSelectionPageState extends State<SeatSelectionPage> {
                           children: [
                             const Text("No seats found for this trip."),
                             const SizedBox(height: 10),
-                            OutlinedButton(
-                              onPressed: _loadSeats,
-                              child: const Text("Retry"),
-                            ),
+                            OutlinedButton(onPressed: _loadSeats, child: const Text("Retry")),
                           ],
                         ),
                       )
@@ -118,28 +136,30 @@ class _SeatSelectionPageState extends State<SeatSelectionPage> {
                         padding: const EdgeInsets.all(16),
                         child: GridView.builder(
                           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: maxCol == 0 ? 4 : maxCol,
+                            crossAxisCount: cols,
                             mainAxisSpacing: 10,
                             crossAxisSpacing: 10,
                             childAspectRatio: 1.2,
                           ),
-                          itemCount: _seats.length,
-                          itemBuilder: (context, i) {
-                            final seat = _seats[i];
+                          itemCount: totalCells,
+                          itemBuilder: (context, index) {
+                            // ✅ 1-based mapping
+                            final r = (index ~/ cols) + 1;
+                            final c = (index % cols) + 1;
+
+                            final seat = seatByPos["$r:$c"];
+                            if (seat == null || seat.seatType == "aisle") return const SizedBox.shrink();
+
                             final booked = seat.isBooked;
-                            final selected = _selectedSeatIds.contains(seat.seatId);
+                            final selected = _selectedSeatId == seat.seatId;
 
                             Color bg;
-                            if (booked) {
-                              bg = Colors.red.shade300;
-                            } else if (selected) {
-                              bg = Colors.blue.shade700;
-                            } else {
-                              bg = Colors.grey.shade200;
-                            }
+                            if (booked) bg = Colors.red.shade300;
+                            else if (selected) bg = Colors.blue.shade700;
+                            else bg = Colors.grey.shade200;
 
                             return InkWell(
-                              onTap: () => _toggle(seat),
+                              onTap: () => _select(seat),
                               borderRadius: BorderRadius.circular(14),
                               child: Container(
                                 decoration: BoxDecoration(
@@ -166,42 +186,16 @@ class _SeatSelectionPageState extends State<SeatSelectionPage> {
             top: false,
             child: Padding(
               padding: const EdgeInsets.all(14),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          "Selected: $totalSeats/$_maxSelect",
-                          style: const TextStyle(fontWeight: FontWeight.w800),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 54,
-                    child: ElevatedButton(
-                      onPressed: _selectedSeatIds.isEmpty
-                          ? null
-                          : () {
-                              Navigator.pushNamed(
-                                context,
-                                AppRoutes.confirmBooking,
-                                arguments: ConfirmBookingArgs(
-                                  trip: t,
-                                  seatIds: _selectedSeatIds.toList()..sort(),
-                                ),
-                              );
-                            },
-                      child: const Text(
-                        "Continue",
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
-                      ),
-                    ),
-                  ),
-                ],
+              child: SizedBox(
+                width: double.infinity,
+                height: 54,
+                child: ElevatedButton(
+                  onPressed: _selectedSeatId == null
+                      ? null
+                      : () => Navigator.pop(context, _selectedSeatId),
+                  child: const Text("Save Seat",
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900)),
+                ),
               ),
             ),
           ),

@@ -208,6 +208,9 @@ export async function getMyBookings(req, res) {
       `
       SELECT
         b.booking_id,
+        b.trip_id,            
+        b.seat_id,            
+        t.bus_id,  
         b.status,
         b.paid_via,
         b.price,
@@ -237,3 +240,256 @@ export async function getMyBookings(req, res) {
     return res.status(500).json({ message: "Server error" });
   }
 }
+
+/**
+ * PATCH /api/bookings/:bookingId/seat
+ * body: { seatId }
+ */
+export async function changeBookingSeat(req, res) {
+  const client = await pool.connect();
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+    const bookingId = Number(req.params.bookingId);
+    const { seatId } = req.body;
+
+    if (!bookingId || !seatId) {
+      return res.status(400).json({ message: "bookingId and seatId are required" });
+    }
+
+    await expirePendingBookingsOnce();
+
+    await client.query("BEGIN");
+
+    // 1) Load booking and validate ownership
+    const bRes = await client.query(
+      `
+      SELECT booking_id, user_id, trip_id, seat_id, status, booking_time
+      FROM bookings
+      WHERE booking_id = $1
+      FOR UPDATE
+      `,
+      [bookingId]
+    );
+
+    if (bRes.rowCount === 0) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ message: "Booking not found" });
+    }
+
+    const b = bRes.rows[0];
+    if (Number(b.user_id) !== Number(userId)) {
+      await client.query("ROLLBACK");
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
+    // Disallow changing seat if already cancelled (if you use this status)
+    if (String(b.status) === "cancelled") {
+      await client.query("ROLLBACK");
+      return res.status(400).json({ message: "Booking is cancelled" });
+    }
+
+    // If same seat, no-op
+    if (Number(b.seat_id) === Number(seatId)) {
+      await client.query("ROLLBACK");
+      return res.status(200).json({ message: "Seat unchanged", bookingId });
+    }
+
+    // 2) Trip status + booking window enforcement (same logic as createBooking)
+    const tripRes = await client.query(
+      `SELECT departure_time, status, bus_id FROM trips WHERE trip_id = $1`,
+      [b.trip_id]
+    );
+
+    if (tripRes.rowCount === 0) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ message: "Trip not found" });
+    }
+
+    const trip = tripRes.rows[0];
+    const tripStatus = String(trip.status);
+
+    if (["cancelled", "completed"].includes(tripStatus)) {
+      await client.query("ROLLBACK");
+      return res.status(400).json({ message: "Trip is not editable" });
+    }
+
+    if (tripStatus !== "scheduled") {
+      await client.query("ROLLBACK");
+      return res.status(400).json({ message: "Seat change closed (trip started)" });
+    }
+
+    const depMs = new Date(trip.departure_time).getTime();
+    const nowMs = Date.now();
+
+    const cutoffMs = depMs - CUTOFF_MINUTES * 60 * 1000;
+    const graceEndMs = depMs + GRACE_AFTER_MINUTES * 60 * 1000;
+
+    if (nowMs >= cutoffMs && nowMs > graceEndMs) {
+      await client.query("ROLLBACK");
+      return res.status(400).json({ message: "Seat change window closed" });
+    }
+
+    // 3) Validate seat belongs to this trip bus
+    const seatCheck = await client.query(
+      `
+      SELECT 1
+      FROM seats s
+      WHERE s.bus_id = $1 AND s.seat_id = $2
+      `,
+      [trip.bus_id, seatId]
+    );
+
+    if (seatCheck.rowCount === 0) {
+      await client.query("ROLLBACK");
+      return res.status(400).json({ message: "Invalid seat for this trip" });
+    }
+
+    // 4) Conflict check (TTL-aware pending)
+    const conflict = await client.query(
+      `
+      SELECT 1
+      FROM bookings
+      WHERE trip_id = $1
+        AND seat_id = $2
+        AND booking_id <> $3
+        AND (
+          status = 'confirmed'
+          OR (status = 'pending' AND booking_time >= NOW() - ($4::text || ' minutes')::interval)
+        )
+      LIMIT 1
+      `,
+      [b.trip_id, seatId, bookingId, String(TTL_MINUTES)]
+    );
+
+    if (conflict.rowCount > 0) {
+      await client.query("ROLLBACK");
+      return res.status(409).json({ message: "Seat already booked" });
+    }
+
+    // 5) Update seat
+    const upd = await client.query(
+      `
+      UPDATE bookings
+      SET seat_id = $1
+      WHERE booking_id = $2
+      RETURNING booking_id, trip_id, seat_id, status
+      `,
+      [seatId, bookingId]
+    );
+
+    await client.query("COMMIT");
+
+    return res.json({
+      message: "Seat updated",
+      booking: upd.rows[0],
+    });
+  } catch (err) {
+    await client.query("ROLLBACK");
+    console.error("changeBookingSeat error:", err);
+    return res.status(500).json({ message: "Server error" });
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * PATCH /api/bookings/:bookingId/cancel
+ */
+export async function cancelBooking(req, res) {
+  const client = await pool.connect();
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+    const bookingId = Number(req.params.bookingId);
+    if (!bookingId) return res.status(400).json({ message: "bookingId is required" });
+
+    await expirePendingBookingsOnce();
+
+    await client.query("BEGIN");
+
+    const bRes = await client.query(
+      `
+      SELECT booking_id, user_id, trip_id, status
+      FROM bookings
+      WHERE booking_id = $1
+      FOR UPDATE
+      `,
+      [bookingId]
+    );
+
+    if (bRes.rowCount === 0) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ message: "Booking not found" });
+    }
+
+    const b = bRes.rows[0];
+    if (Number(b.user_id) !== Number(userId)) {
+      await client.query("ROLLBACK");
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
+    if (String(b.status) === "cancelled") {
+      await client.query("ROLLBACK");
+      return res.status(200).json({ message: "Already cancelled" });
+    }
+
+    // Trip status + cutoff rule
+    const tripRes = await client.query(
+      `SELECT departure_time, status FROM trips WHERE trip_id = $1`,
+      [b.trip_id]
+    );
+
+    if (tripRes.rowCount === 0) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ message: "Trip not found" });
+    }
+
+    const trip = tripRes.rows[0];
+    const tripStatus = String(trip.status);
+
+    if (["cancelled", "completed"].includes(tripStatus)) {
+      await client.query("ROLLBACK");
+      return res.status(400).json({ message: "Trip is not cancellable" });
+    }
+
+    if (tripStatus !== "scheduled") {
+      await client.query("ROLLBACK");
+      return res.status(400).json({ message: "Cancel closed (trip started)" });
+    }
+
+    const depMs = new Date(trip.departure_time).getTime();
+    const nowMs = Date.now();
+
+    const cutoffMs = depMs - CUTOFF_MINUTES * 60 * 1000;
+    const graceEndMs = depMs + GRACE_AFTER_MINUTES * 60 * 1000;
+
+    if (nowMs >= cutoffMs && nowMs > graceEndMs) {
+      await client.query("ROLLBACK");
+      return res.status(400).json({ message: "Cancel window closed" });
+    }
+
+    // Cancel booking (assumes status column can store 'cancelled')
+    const upd = await client.query(
+      `
+      UPDATE bookings
+      SET status = 'cancelled'
+      WHERE booking_id = $1
+      RETURNING booking_id, trip_id, status
+      `,
+      [bookingId]
+    );
+
+    await client.query("COMMIT");
+    return res.json({ message: "Booking cancelled", booking: upd.rows[0] });
+  } catch (err) {
+    await client.query("ROLLBACK");
+    console.error("cancelBooking error:", err);
+    return res.status(500).json({ message: "Server error" });
+  } finally {
+    client.release();
+  }
+}
+
