@@ -1,53 +1,47 @@
-import express from "express";
-import cors from "cors";
+import path from "path";
+import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 
-import passengerRoutes from "./routes/passenger.routes.js";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// ✅ Load .env from project root (hbts-backend/.env)
+dotenv.config({ path: path.join(__dirname, "../.env") });
+
+import express from "express";
+import cors from "cors";
+
+import authRoutes from "./routes/auth.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
 import tripRoutes from "./routes/trip.routes.js";
 import bookingRoutes from "./routes/booking.routes.js";
 import { startExpirePendingBookingsJob } from "./jobs/expirePendingBookings.job.js";
 
+const app = express();
 
-dotenv.config();
+app.use(
+  cors({
+    origin: true,
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 
-const app = express(); // ✅ app FIRST
-
-// =======================
-// MIDDLEWARE
-// =======================
-app.use(cors());
+app.options("*", cors());
 app.use(express.json());
 
-// Routes
+// ✅ Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/trips", tripRoutes);
 app.use("/api/bookings", bookingRoutes);
 
+app.get("/health", (req, res) => res.json({ ok: true }));
+app.get("/", (req, res) => res.send("HBTS Backend is running 🚀"));
 
-app.get("/health", (req, res) => {
-  res.json({ ok: true });
-// =======================
-// ROUTES
-// =======================
-app.use("/auth/passenger", passengerRoutes);
-app.use("/admin", adminRoutes);
-
-// =======================
-// HEALTH CHECK
-// =======================
-app.get("/", (req, res) => {
-  res.send("HBTS Backend is running 🚀");
-});
-
-// =======================
-// START SERVER
-// =======================
 const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
 
 console.log("BOOT: starting expirePendingBookings job");
 startExpirePendingBookingsJob();
