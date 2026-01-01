@@ -13,6 +13,9 @@ import 'screens/seat_selection_page.dart';
 import 'screens/confirm_booking_page.dart';
 import 'screens/booking_success_page.dart';
 
+import 'admin/dashboard.dart';
+
+
 class AppRoutes {
   static const login = '/login';
   static const home = '/home';
@@ -27,10 +30,15 @@ class AppRoutes {
   static const confirmBooking = '/confirm-booking';
   static const bookingSuccess = '/booking-success';
 
+  static const adminHome = '/admin/dashboard';
+
   static Route<dynamic> onGenerate(RouteSettings settings) {
     switch (settings.name) {
       case login:
         return MaterialPageRoute(builder: (_) => const LoginScreen());
+
+      case adminHome:
+        return MaterialPageRoute(builder: (_) => const AdminDashboard());  
 
       case home:
         return MaterialPageRoute(builder: (_) => const HomePage());
@@ -45,13 +53,8 @@ class AppRoutes {
       case schedule:
         return MaterialPageRoute(builder: (_) => const SchedulePage());
 
-<<<<<<< HEAD
-      case AppRoutes.myBookings:
-        return MaterialPageRoute(builder: (_) => const PassengerBookingsPage());
-=======
       case myBookings:
-        return MaterialPageRoute(builder: (_) => const MyBookingsPage());
->>>>>>> origin/develop
+        return MaterialPageRoute(builder: (_) => const PassengerBookingsPage());
 
       case trackMyBooking:
         return MaterialPageRoute(builder: (_) => const TrackMyBookingPage());
