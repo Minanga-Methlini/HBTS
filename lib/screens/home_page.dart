@@ -4,6 +4,7 @@ import '../services/token_store.dart';
 import '../services/user_api.dart';
 import '../models/user_model.dart';
 import '../app_routes.dart';
+import 'notifications_page.dart'; // 🔔 ADD THIS IMPORT
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -23,13 +24,11 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _initHome() async {
-    // (Optional) tiny yield to let storage finish writes in some flows
     await Future.delayed(Duration.zero);
 
     final loggedIn = await TokenStore.isLoggedIn();
     final isAdmin = await TokenStore.isAdmin();
 
-    // Passenger app only; admins go to admin area (or login)
     if (!loggedIn || isAdmin) {
       _goLogin();
       return;
@@ -43,7 +42,6 @@ class _HomePageState extends State<HomePage> {
         _loading = false;
       });
     } catch (e) {
-      // Stop infinite spinner + show a message
       debugPrint("HOME INIT ERROR => $e");
       if (!mounted) return;
       setState(() {
@@ -96,7 +94,6 @@ class _HomePageState extends State<HomePage> {
       );
     }
 
-    // If loading finished but user is still null, show a safe error UI
     if (_user == null) {
       return Scaffold(
         appBar: AppBar(title: const Text("HBTS")),
@@ -148,42 +145,53 @@ class _HomePageState extends State<HomePage> {
         backgroundColor: Colors.blue.shade700,
         foregroundColor: Colors.white,
         actions: [
+          // 🔔 NOTIFICATIONS BUTTON (NEW)
+          IconButton(
+            tooltip: "Notifications",
+            icon: const Icon(Icons.notifications),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const NotificationsPage(),
+                ),
+              );
+            },
+          ),
+
+          // 🚪 LOGOUT
           IconButton(
             tooltip: "Logout",
             icon: const Icon(Icons.logout),
-            onPressed: () async {
-               await _logout();
-            },
+            onPressed: _logout,
           ),
+
+          // 👤 PROFILE
           Padding(
             padding: const EdgeInsets.only(right: 12),
             child: GestureDetector(
               onTap: _openProfile,
               child: CircleAvatar(
                 radius: 18,
-                backgroundImage: hasPhoto
-                  ? NetworkImage(user.profileImage!)
-                  : null,
+                backgroundImage:
+                    hasPhoto ? NetworkImage(user.profileImage!) : null,
                 child: !hasPhoto
-                  ? Text(
-                    user.name.isNotEmpty
-                      ? user.name[0].toUpperCase()
-                      : "U",
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  )
-                : null,
+                    ? Text(
+                        user.name.isNotEmpty
+                            ? user.name[0].toUpperCase()
+                            : "U",
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      )
+                    : null,
               ),
             ),
           ),
         ],
-
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // 👋 Welcome Card
+          // 👋 Welcome
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -202,7 +210,7 @@ class _HomePageState extends State<HomePage> {
 
           const SizedBox(height: 16),
 
-          // 🚀 Main Actions
+          // 🚀 MAIN ACTIONS
           GridView.count(
             crossAxisCount: MediaQuery.of(context).size.width > 900 ? 4 : 2,
             shrinkWrap: true,
@@ -214,25 +222,29 @@ class _HomePageState extends State<HomePage> {
                 icon: Icons.schedule,
                 title: "Schedule",
                 subtitle: "Search buses & book seats",
-                onTap: () => Navigator.pushNamed(context, AppRoutes.schedule),
+                onTap: () =>
+                    Navigator.pushNamed(context, AppRoutes.schedule),
               ),
               _ActionCard(
                 icon: Icons.receipt_long,
                 title: "My Bookings",
                 subtitle: "Tickets & history",
-                onTap: () => Navigator.pushNamed(context, AppRoutes.myBookings),
+                onTap: () =>
+                    Navigator.pushNamed(context, AppRoutes.myBookings),
               ),
               _ActionCard(
                 icon: Icons.location_searching,
                 title: "Track My Booking",
                 subtitle: "Track using booking",
-                onTap: () => Navigator.pushNamed(context, AppRoutes.trackMyBooking),
+                onTap: () =>
+                    Navigator.pushNamed(context, AppRoutes.trackMyBooking),
               ),
               _ActionCard(
                 icon: Icons.directions_bus,
                 title: "Track a Bus",
                 subtitle: "Without booking",
-                onTap: () => Navigator.pushNamed(context, AppRoutes.trackBus),
+                onTap: () =>
+                    Navigator.pushNamed(context, AppRoutes.trackBus),
               ),
             ],
           ),

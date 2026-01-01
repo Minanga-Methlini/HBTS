@@ -86,14 +86,14 @@ class CurrentBookingsTab extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       itemCount: bookings.length,
       itemBuilder: (_, i) {
-        final b = bookings[i];
+        final booking = bookings[i];
         return BookingCard(
-          booking: b,
+          booking: booking,
           onTap: () {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) => BookingDetailsPage(booking: b),
+                builder: (_) => BookingDetailsPage(booking: booking),
               ),
             );
           },
@@ -117,13 +117,13 @@ class BookingHistoryTab extends StatelessWidget {
         route: "Colombo → Galle",
         dateTime: "02 Jul 2025 · 7:00 AM",
         status: BookingStatus.completed,
-        seats: [],
+        seats: const [],
       ),
       Booking(
         route: "Galle → Colombo",
         dateTime: "10 Jun 2025 · 5:30 PM",
         status: BookingStatus.cancelled,
-        seats: [],
+        seats: const [],
       ),
     ];
 
@@ -131,8 +131,7 @@ class BookingHistoryTab extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       itemCount: history.length,
       itemBuilder: (_, i) {
-        final b = history[i];
-        return BookingCard(booking: b);
+        return BookingCard(booking: history[i]);
       },
     );
   }
@@ -216,21 +215,19 @@ class BookingDetailsPage extends StatelessWidget {
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Text(booking.dateTime),
           const SizedBox(height: 16),
 
-          /// STATUS
           StatusBadge(status: booking.status, large: true),
 
           const SizedBox(height: 24),
-
-          /// SEAT MAP
           const Text(
             "Your Seat",
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
+
           SeatMapView(selectedSeats: booking.seats),
         ],
       ),
