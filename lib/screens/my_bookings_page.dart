@@ -1,40 +1,60 @@
 import 'package:flutter/material.dart';
+import '../api/booking_api.dart';
+import '../models/my_booking_item.dart';
+import 'booking_details_page.dart';
 
-/// ======================
-/// ENUMS & MODELS (UI)
-/// ======================
+enum BookingStatusUI { scheduled, cancelled, onboard, completed }
 
-enum BookingStatus {
-  scheduled,
-  delayed,
-  cancelled,
-  onboard,
-  completed,
+BookingStatusUI mapUiStatus(MyBookingItem b) {
+  final trip = b.tripStatus.toLowerCase();
+  final st = b.status.toLowerCase();
+
+  if (trip == "cancelled" || st == "cancelled") return BookingStatusUI.cancelled;
+  if (trip == "completed") return BookingStatusUI.completed;
+  if (trip == "running" || trip == "started") return BookingStatusUI.onboard;
+
+  return BookingStatusUI.scheduled;
 }
 
-class Booking {
-  final String route;
-  final String dateTime;
-  final BookingStatus status;
-  final List<int> seats;
-
-  Booking({
-    required this.route,
-    required this.dateTime,
-    required this.status,
-    required this.seats,
-  });
-}
-
-/// ======================
-/// MAIN PAGE
-/// ======================
-
-class PassengerBookingsPage extends StatelessWidget {
+class PassengerBookingsPage extends StatefulWidget {
   const PassengerBookingsPage({super.key});
 
   @override
+  State<PassengerBookingsPage> createState() => _PassengerBookingsPageState();
+}
+
+class _PassengerBookingsPageState extends State<PassengerBookingsPage> {
+  bool _loading = true;
+  String? _error;
+  List<MyBookingItem> _all = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    try {
+      final data = await BookingApi.getMyBookings();
+      setState(() => _all = data);
+    } catch (e) {
+      setState(() => _error = e.toString());
+    } finally {
+      setState(() => _loading = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final current = _all.where((b) => !b.isHistory).toList();
+    final history = _all.where((b) => b.isHistory).toList();
+
     return DefaultTabController(
       length: 2,
       child: Scaffold(
@@ -47,112 +67,86 @@ class PassengerBookingsPage extends StatelessWidget {
             ],
           ),
         ),
-        body: const TabBarView(
-          children: [
-            CurrentBookingsTab(),
-            BookingHistoryTab(),
-          ],
-        ),
+        body: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : _error != null
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text("Failed to load bookings:\n$_error"),
+                          const SizedBox(height: 12),
+                          OutlinedButton(onPressed: _load, child: const Text("Retry")),
+                        ],
+                      ),
+                    ),
+                  )
+                : TabBarView(
+                    children: [
+                      _BookingsList(items: current, onRefresh: _load),
+                      _BookingsList(items: history, onRefresh: _load),
+                    ],
+                  ),
       ),
     );
   }
 }
 
-/// ======================
-/// CURRENT BOOKINGS TAB
-/// ======================
+class _BookingsList extends StatelessWidget {
+  final List<MyBookingItem> items;
+  final Future<void> Function() onRefresh;
 
-class CurrentBookingsTab extends StatelessWidget {
-  const CurrentBookingsTab({super.key});
+  const _BookingsList({required this.items, required this.onRefresh});
 
   @override
   Widget build(BuildContext context) {
-    final bookings = [
-      Booking(
-        route: "Colombo → Kandy",
-        dateTime: "12 Aug 2025 · 6:30 AM",
-        status: BookingStatus.onboard,
-        seats: [5],
-      ),
-      Booking(
-        route: "Kandy → Jaffna",
-        dateTime: "15 Aug 2025 · 9:00 PM",
-        status: BookingStatus.delayed,
-        seats: [12],
-      ),
-    ];
-
-    return ListView.builder(
-      padding: const EdgeInsets.all(12),
-      itemCount: bookings.length,
-      itemBuilder: (_, i) {
-        final booking = bookings[i];
-        return BookingCard(
-          booking: booking,
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => BookingDetailsPage(booking: booking),
-              ),
-            );
-          },
-        );
-      },
+    return RefreshIndicator(
+      onRefresh: onRefresh,
+      child: items.isEmpty
+          ? ListView(
+              children: const [
+                SizedBox(height: 140),
+                Center(child: Text("No bookings found")),
+              ],
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(12),
+              itemCount: items.length,
+              itemBuilder: (_, i) {
+                final b = items[i];
+                return _BookingCard(
+                  item: b,
+                  onTap: () async {
+                    // refresh when coming back (seat changed / cancelled)
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => BookingDetailsPage(item: b)),
+                    );
+                    await onRefresh();
+                  },
+                );
+              },
+            ),
     );
   }
 }
 
-/// ======================
-/// BOOKING HISTORY TAB
-/// ======================
+class _BookingCard extends StatelessWidget {
+  final MyBookingItem item;
+  final VoidCallback onTap;
 
-class BookingHistoryTab extends StatelessWidget {
-  const BookingHistoryTab({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final history = [
-      Booking(
-        route: "Colombo → Galle",
-        dateTime: "02 Jul 2025 · 7:00 AM",
-        status: BookingStatus.completed,
-        seats: const [],
-      ),
-      Booking(
-        route: "Galle → Colombo",
-        dateTime: "10 Jun 2025 · 5:30 PM",
-        status: BookingStatus.cancelled,
-        seats: const [],
-      ),
-    ];
-
-    return ListView.builder(
-      padding: const EdgeInsets.all(12),
-      itemCount: history.length,
-      itemBuilder: (_, i) {
-        return BookingCard(booking: history[i]);
-      },
-    );
-  }
-}
-
-/// ======================
-/// BOOKING CARD
-/// ======================
-
-class BookingCard extends StatelessWidget {
-  final Booking booking;
-  final VoidCallback? onTap;
-
-  const BookingCard({
-    super.key,
-    required this.booking,
-    this.onTap,
-  });
+  const _BookingCard({required this.item, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
+    final uiStatus = mapUiStatus(item);
+
+    final dt = item.departureTime;
+    final dateTimeText =
+        "${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year} · ${_time(dt)}";
+
     return Card(
       elevation: 3,
       margin: const EdgeInsets.only(bottom: 12),
@@ -168,165 +162,60 @@ class BookingCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      booking.route,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    Text(item.routeText,
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 4),
-                    Text(
-                      booking.dateTime,
-                      style: TextStyle(color: Colors.grey.shade700),
-                    ),
+                    Text(dateTimeText, style: TextStyle(color: Colors.grey.shade700)),
+                    const SizedBox(height: 6),
+                    Text("Seat: ${item.seatLabel}",
+                        style: const TextStyle(fontWeight: FontWeight.w800)),
                   ],
                 ),
               ),
-              StatusBadge(status: booking.status),
+              _StatusBadge(status: uiStatus),
             ],
           ),
         ),
       ),
     );
   }
-}
 
-/// ======================
-/// BOOKING DETAILS PAGE
-/// ======================
-
-class BookingDetailsPage extends StatelessWidget {
-  final Booking booking;
-
-  const BookingDetailsPage({super.key, required this.booking});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("Booking Details")),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Text(
-            booking.route,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(booking.dateTime),
-          const SizedBox(height: 16),
-
-          StatusBadge(status: booking.status, large: true),
-
-          const SizedBox(height: 24),
-          const Text(
-            "Your Seat",
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 12),
-
-          SeatMapView(selectedSeats: booking.seats),
-        ],
-      ),
-    );
+  String _time(DateTime dt) {
+    final h = dt.hour;
+    final hh = (h % 12 == 0) ? 12 : (h % 12);
+    final mm = dt.minute.toString().padLeft(2, '0');
+    final ampm = h >= 12 ? "PM" : "AM";
+    return "$hh:$mm $ampm";
   }
 }
 
-/// ======================
-/// STATUS BADGE
-/// ======================
-
-class StatusBadge extends StatelessWidget {
-  final BookingStatus status;
-  final bool large;
-
-  const StatusBadge({
-    super.key,
-    required this.status,
-    this.large = false,
-  });
+class _StatusBadge extends StatelessWidget {
+  final BookingStatusUI status;
+  const _StatusBadge({required this.status});
 
   @override
   Widget build(BuildContext context) {
     final text = {
-      BookingStatus.scheduled: "Scheduled",
-      BookingStatus.delayed: "Delayed",
-      BookingStatus.cancelled: "Cancelled",
-      BookingStatus.onboard: "Passenger in Bus",
-      BookingStatus.completed: "Completed",
+      BookingStatusUI.scheduled: "Scheduled",
+      BookingStatusUI.cancelled: "Cancelled",
+      BookingStatusUI.onboard: "Passenger in Bus",
+      BookingStatusUI.completed: "Completed",
     }[status]!;
 
     final color = {
-      BookingStatus.scheduled: Colors.blue,
-      BookingStatus.delayed: Colors.orange,
-      BookingStatus.cancelled: Colors.red,
-      BookingStatus.onboard: Colors.green,
-      BookingStatus.completed: Colors.grey,
+      BookingStatusUI.scheduled: Colors.blue,
+      BookingStatusUI.cancelled: Colors.red,
+      BookingStatusUI.onboard: Colors.green,
+      BookingStatusUI.completed: Colors.grey,
     }[status]!;
 
     return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: large ? 16 : 10,
-        vertical: large ? 8 : 6,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: color.withOpacity(0.15),
         borderRadius: BorderRadius.circular(20),
       ),
-      child: Text(
-        text,
-        style: TextStyle(
-          color: color,
-          fontWeight: FontWeight.bold,
-          fontSize: large ? 14 : 12,
-        ),
-      ),
-    );
-  }
-}
-
-/// ======================
-/// SEAT MAP (READ ONLY)
-/// ======================
-
-class SeatMapView extends StatelessWidget {
-  final List<int> selectedSeats;
-
-  const SeatMapView({super.key, required this.selectedSeats});
-
-  @override
-  Widget build(BuildContext context) {
-    return GridView.builder(
-      itemCount: 20,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 4,
-        mainAxisSpacing: 8,
-        crossAxisSpacing: 8,
-      ),
-      itemBuilder: (_, i) {
-        final seatNo = i + 1;
-        final isMine = selectedSeats.contains(seatNo);
-
-        return Container(
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: isMine ? Colors.blue.shade700 : Colors.grey.shade300,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Text(
-            seatNo.toString(),
-            style: TextStyle(
-              color: isMine ? Colors.white : Colors.black,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        );
-      },
+      child: Text(text, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 12)),
     );
   }
 }
