@@ -3,7 +3,7 @@ import { pool } from "../db.js";
 
 export const driverStatusReport = async (req, res) => {
   try {
-    const result = await db.query(`
+    const result = await pool.query(`
       SELECT status, COUNT(*) AS total
       FROM drivers
       GROUP BY status

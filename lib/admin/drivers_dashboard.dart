@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import '../services/driver_admin_api.dart';
 import 'driver_review_form.dart';
-
 
 class DriversDashboard extends StatefulWidget {
   const DriversDashboard({super.key});
@@ -42,288 +42,218 @@ class _DriversDashboardState extends State<DriversDashboard>
       body: TabBarView(
         controller: _tabController,
         children: const [
-          ApprovedDriversTab(),
-          PendingDriversTab(),
-          RejectedDriversTab(),
+          DriverListTab(status: "approved"),
+          DriverListTab(status: "pending"),
+          DriverListTab(status: "rejected"),
         ],
       ),
     );
   }
 }
 
-/* ---------------- TAB PAGES (TEMP UI) ---------------- */
+class DriverListTab extends StatefulWidget {
+  const DriverListTab({
+    super.key,
+    required this.status,
+  });
 
-class ApprovedDriversTab extends StatelessWidget {
-  const ApprovedDriversTab({super.key});
-
-  final List<Map<String, String>> approvedDrivers = const [
-    {
-      'name': 'Sunil Fernando',
-      'license': 'A4455667',
-      'operator': 'SL Bus Company',
-    },
-    {
-      'name': 'Ruwan Perera',
-      'license': 'B9988776',
-      'operator': 'Private Owner',
-    },
-  ];
+  final String status;
 
   @override
-  Widget build(BuildContext context) {
-    if (approvedDrivers.isEmpty) {
-      return const Center(child: Text('No approved drivers'));
-    }
-
-    return ListView.separated(
-      padding: const EdgeInsets.all(12),
-      itemCount: approvedDrivers.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
-      itemBuilder: (context, index) {
-        final driver = approvedDrivers[index];
-
-        return Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(10),
-            boxShadow: const [
-              BoxShadow(
-                color: Colors.black12,
-                blurRadius: 4,
-                offset: Offset(0, 2),
-              )
-            ],
-          ),
-          child: Row(
-            children: [
-              const CircleAvatar(
-                radius: 24,
-                backgroundColor: Colors.green,
-                child: Icon(Icons.check, color: Colors.white),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      driver['name']!,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text('License: ${driver['license']}'),
-                    Text('Operator: ${driver['operator']}'),
-                  ],
-                ),
-              ),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.green.shade100,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Text(
-                  'APPROVED',
-                  style: TextStyle(
-                    color: Colors.green,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              )
-            ],
-          ),
-        );
-      },
-    );
-  }
+  State<DriverListTab> createState() => _DriverListTabState();
 }
 
-class PendingDriversTab extends StatelessWidget {
-  const PendingDriversTab({super.key});
+class _DriverListTabState extends State<DriverListTab> {
+  List<dynamic> drivers = [];
+  bool loading = true;
+  String? error;
 
-  final List<Map<String, String>> pendingDrivers = const [
-    {
-      'name': 'Kamal Perera',
-      'license': 'B1234567',
-      'operator': 'SL Bus Company',
-    },
-    {
-      'name': 'Nimal Silva',
-      'license': 'C9876543',
-      'operator': 'Private Owner',
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      loading = true;
+      error = null;
+    });
+
+    try {
+      final data = await DriverAdminApi.list(status: widget.status);
+      setState(() => drivers = data);
+    } catch (e) {
+      setState(() => error = e.toString());
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => loading = false);
+      }
+    }
+  }
+
+  String _text(Map<String, dynamic> driver, List<String> keys,
+      {String fallback = "-"}) {
+    for (final key in keys) {
+      final value = driver[key];
+      if (value != null && value.toString().trim().isNotEmpty) {
+        return value.toString();
+      }
+    }
+    return fallback;
+  }
+
+  int? _id(Map<String, dynamic> driver) {
+    final v = driver["driver_id"] ?? driver["id"] ?? driver["driverId"];
+    if (v == null) return null;
+    return int.tryParse(v.toString());
+  }
 
   @override
   Widget build(BuildContext context) {
-    if (pendingDrivers.isEmpty) {
-      return const Center(child: Text('No pending drivers'));
-    }
+    final isPending = widget.status == "pending";
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(12),
-      itemCount: pendingDrivers.length,
-      itemBuilder: (context, index) {
-        final driver = pendingDrivers[index];
+    Widget content;
+    if (loading) {
+      content = const Center(child: CircularProgressIndicator());
+    } else if (error != null) {
+      content = Center(
+        child: Text(
+          error ?? "",
+          textAlign: TextAlign.center,
+          style: const TextStyle(color: Colors.red),
+        ),
+      );
+    } else if (drivers.isEmpty) {
+      content = Center(
+        child: Text("No ${widget.status} drivers"),
+      );
+    } else {
+      content = ListView.separated(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(12),
+        itemCount: drivers.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 10),
+        itemBuilder: (context, index) {
+          final driver = drivers[index] as Map<String, dynamic>;
+          final id = _id(driver);
+          final name = _text(driver, ["full_name", "name"]);
+          final license = _text(driver, ["license_number", "license"]);
+          final operatorName = _text(driver, ["operator_name", "operator"]);
+          final phone = _text(driver, ["phone"]);
+          final rejectionReason =
+              _text(driver, ["rejection_reason", "reason"], fallback: "");
 
-        return Card(
-          elevation: 2,
-          margin: const EdgeInsets.only(bottom: 12),
-          child: ListTile(
-            leading: const CircleAvatar(
-              backgroundColor: Colors.orange,
-              child: Icon(Icons.person, color: Colors.white),
-            ),
-            title: Text(driver['name']!),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('License: ${driver['license']}'),
-                Text('Operator: ${driver['operator']}'),
+          return Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              boxShadow: const [
+                BoxShadow(
+                  color: Colors.black12,
+                  blurRadius: 4,
+                  offset: Offset(0, 2),
+                )
               ],
             ),
-            trailing: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.orange.shade100,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Text(
-                'PENDING',
-                style: TextStyle(
-                  color: Colors.orange,
-                  fontWeight: FontWeight.bold,
+            child: ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: CircleAvatar(
+                backgroundColor: widget.status == "approved"
+                    ? Colors.green
+                    : widget.status == "pending"
+                        ? Colors.orange
+                        : Colors.red,
+                child: Icon(
+                  widget.status == "approved"
+                      ? Icons.check
+                      : widget.status == "pending"
+                          ? Icons.person
+                          : Icons.close,
+                  color: Colors.white,
                 ),
               ),
-            ),
-            
-              onTap: () {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) => DriverReviewForm(
-        driverData: {
-          'name': driver['name']!,
-          'license': driver['license']!,
-          'operator': driver['operator']!,
-          'phone': '0771234567',
-        },
-      ),
-    ),
-  );
-},
-
-          ),
-        );
-      },
-    );
-  }
-}
-
-class RejectedDriversTab extends StatelessWidget {
-  const RejectedDriversTab({super.key});
-
-  final List<Map<String, String>> rejectedDrivers = const [
-    {
-      'name': 'Mahesh Kumara',
-      'license': 'D3344556',
-      'operator': 'Private Owner',
-      'reason': 'Invalid license document',
-    },
-    {
-      'name': 'Ajith Silva',
-      'license': 'C1122334',
-      'operator': 'SL Bus Company',
-      'reason': 'Incomplete details',
-    },
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    if (rejectedDrivers.isEmpty) {
-      return const Center(child: Text('No rejected drivers'));
-    }
-
-    return ListView.separated(
-      padding: const EdgeInsets.all(12),
-      itemCount: rejectedDrivers.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
-      itemBuilder: (context, index) {
-        final driver = rejectedDrivers[index];
-
-        return Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.grey.shade200,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: Colors.red.shade200),
-          ),
-          child: Row(
-            children: [
-              const CircleAvatar(
-                radius: 24,
-                backgroundColor: Colors.red,
-                child: Icon(Icons.close, color: Colors.white),
+              title: Text(
+                name,
+                style: const TextStyle(fontWeight: FontWeight.bold),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      driver['name']!,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        color: Colors.black54,
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text("License: $license"),
+                  Text("Operator: $operatorName"),
+                  Text("Phone: $phone"),
+                  if (widget.status == "rejected" &&
+                      rejectionReason.trim().isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Text(
+                        "Reason: $rejectionReason",
+                        style: const TextStyle(
+                          color: Colors.redAccent,
+                          fontSize: 12,
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'License: ${driver['license']}',
-                      style: const TextStyle(color: Colors.black54),
-                    ),
-                    Text(
-                      'Operator: ${driver['operator']}',
-                      style: const TextStyle(color: Colors.black54),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Reason: ${driver['reason']}',
-                      style: const TextStyle(
-                        color: Colors.redAccent,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
-                ),
+                ],
               ),
-              Container(
+              trailing: Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: Colors.red.shade100,
+                  color: widget.status == "approved"
+                      ? Colors.green.shade100
+                      : widget.status == "pending"
+                          ? Colors.orange.shade100
+                          : Colors.red.shade100,
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: const Text(
-                  'REJECTED',
+                child: Text(
+                  widget.status.toUpperCase(),
                   style: TextStyle(
-                    color: Colors.red,
+                    color: widget.status == "approved"
+                        ? Colors.green
+                        : widget.status == "pending"
+                            ? Colors.orange
+                            : Colors.red,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-              )
-            ],
-          ),
-        );
-      },
+              ),
+              onTap: isPending && id != null
+                  ? () async {
+                      final changed = await Navigator.push<bool>(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => DriverReviewForm(
+                            driverData: driver,
+                          ),
+                        ),
+                      );
+                      if (changed == true) {
+                        _load();
+                      }
+                    }
+                  : null,
+            ),
+          );
+        },
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _load,
+      child: content is ScrollView
+          ? content
+          : ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: [SizedBox(height: 400, child: Center(child: content))],
+            ),
     );
   }
 }
-
 

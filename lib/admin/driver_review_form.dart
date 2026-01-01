@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import '../services/driver_admin_api.dart';
 
 class DriverReviewForm extends StatefulWidget {
-  final Map<String, String> driverData;
+  final Map<String, dynamic> driverData;
 
   const DriverReviewForm({
     super.key,
@@ -16,20 +17,23 @@ class _DriverReviewFormState extends State<DriverReviewForm> {
   late TextEditingController nameController;
   late TextEditingController licenseController;
   late TextEditingController phoneController;
+  late TextEditingController reasonController;
 
   String selectedOperator = 'SL Bus Company';
+  bool _submitting = false;
 
   @override
   void initState() {
     super.initState();
 
-    // Auto-fill from temp driver data
-    nameController =
-        TextEditingController(text: widget.driverData['name']);
+    nameController = TextEditingController(text: _read(["name", "full_name"]));
     licenseController =
-        TextEditingController(text: widget.driverData['license']);
-    phoneController =
-        TextEditingController(text: widget.driverData['phone'] ?? '');
+        TextEditingController(text: _read(["license", "license_number"]));
+    phoneController = TextEditingController(text: _read(["phone"]));
+    reasonController =
+        TextEditingController(text: _read(["rejection_reason", "reason"]));
+    selectedOperator =
+        _read(["operator", "operator_name"], fallback: selectedOperator);
   }
 
   @override
@@ -37,14 +41,113 @@ class _DriverReviewFormState extends State<DriverReviewForm> {
     nameController.dispose();
     licenseController.dispose();
     phoneController.dispose();
+    reasonController.dispose();
     super.dispose();
+  }
+
+  int? get driverId {
+    final v = widget.driverData["driver_id"] ??
+        widget.driverData["id"] ??
+        widget.driverData["driverId"];
+    if (v == null) return null;
+    return int.tryParse(v.toString());
+  }
+
+  String _read(List<String> keys, {String fallback = ""}) {
+    for (final key in keys) {
+      final value = widget.driverData[key];
+      if (value != null && value.toString().trim().isNotEmpty) {
+        return value.toString();
+      }
+    }
+    return fallback;
+  }
+
+  Future<void> _changeStatus(String status) async {
+    final id = driverId;
+    if (id == null) {
+      _showMessage("Driver ID missing", isError: true);
+      return;
+    }
+
+    setState(() => _submitting = true);
+    try {
+      await DriverAdminApi.updateStatus(
+        id,
+        status,
+        reason: status == "rejected" ? reasonController.text.trim() : null,
+      );
+      _showMessage("Driver ${status.toLowerCase()}");
+      Navigator.pop(context, true);
+    } catch (e) {
+      _showMessage(e.toString(), isError: true);
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  Future<void> _updateDriver() async {
+    final id = driverId;
+    if (id == null) {
+      _showMessage("Driver ID missing", isError: true);
+      return;
+    }
+
+    setState(() => _submitting = true);
+    try {
+      await DriverAdminApi.update(
+        id,
+        fullName: nameController.text.trim(),
+        licenseNumber: licenseController.text.trim(),
+        phone: phoneController.text.trim(),
+        operatorName: selectedOperator,
+      );
+      _showMessage("Driver updated");
+      Navigator.pop(context, true);
+    } catch (e) {
+      _showMessage(e.toString(), isError: true);
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  void _showMessage(String msg, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: isError ? Colors.red : null,
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final status = _read(["status"]).toUpperCase();
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Review Driver'),
+        actions: [
+          if (status.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  status,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue,
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -55,7 +158,6 @@ class _DriverReviewFormState extends State<DriverReviewForm> {
             _buildTextField('Phone Number', phoneController),
             const SizedBox(height: 16),
 
-            // Operator dropdown
             DropdownButtonFormField<String>(
               value: selectedOperator,
               decoration: const InputDecoration(
@@ -72,14 +174,24 @@ class _DriverReviewFormState extends State<DriverReviewForm> {
                   child: Text('Private Owner'),
                 ),
               ],
-              onChanged: (value) {
-                setState(() => selectedOperator = value!);
-              },
+              onChanged: _submitting
+                  ? null
+                  : (value) {
+                      if (value != null) {
+                        setState(() => selectedOperator = value);
+                      }
+                    },
             ),
 
-            const SizedBox(height: 30),
+            const SizedBox(height: 16),
+            _buildTextField(
+              'Rejection reason (optional)',
+              reasonController,
+              maxLines: 3,
+            ),
 
-            // Buttons row
+            const SizedBox(height: 20),
+
             Row(
               children: [
                 Expanded(
@@ -87,8 +199,9 @@ class _DriverReviewFormState extends State<DriverReviewForm> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green,
                     ),
-                    onPressed: _approveDriver,
-                    child: const Text('Approve'),
+                    onPressed: _submitting ? null : () => _changeStatus("approved"),
+                    child:
+                        _submitting ? const Text('Working...') : const Text('Approve'),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -97,8 +210,8 @@ class _DriverReviewFormState extends State<DriverReviewForm> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.red,
                     ),
-                    onPressed: _rejectDriver,
-                    child: const Text('Reject'),
+                    onPressed: _submitting ? null : () => _changeStatus("rejected"),
+                    child: _submitting ? const Text('Working...') : const Text('Reject'),
                   ),
                 ),
               ],
@@ -110,14 +223,16 @@ class _DriverReviewFormState extends State<DriverReviewForm> {
               children: [
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: _updateDriver,
-                    child: const Text('Update'),
+                    onPressed: _submitting ? null : _updateDriver,
+                    child: _submitting
+                        ? const Text('Saving...')
+                        : const Text('Update'),
                   ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: _submitting ? null : () => Navigator.pop(context),
                     child: const Text('Cancel'),
                   ),
                 ),
@@ -130,35 +245,21 @@ class _DriverReviewFormState extends State<DriverReviewForm> {
   }
 
   Widget _buildTextField(
-      String label, TextEditingController controller) {
+    String label,
+    TextEditingController controller, {
+    int maxLines = 1,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: TextField(
         controller: controller,
+        maxLines: maxLines,
+        enabled: !_submitting,
         decoration: InputDecoration(
           labelText: label,
           border: const OutlineInputBorder(),
         ),
       ),
-    );
-  }
-
-  // TEMP actions (UI only)
-  void _approveDriver() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Driver Approved')),
-    );
-  }
-
-  void _rejectDriver() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Driver Rejected')),
-    );
-  }
-
-  void _updateDriver() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Driver Updated')),
     );
   }
 }

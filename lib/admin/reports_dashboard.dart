@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'driver_status_report_page.dart';
+import 'full_details_report_page.dart';
 
 class ReportsDashboard extends StatelessWidget {
   const ReportsDashboard({super.key});
@@ -35,6 +36,25 @@ class ReportsDashboard extends StatelessWidget {
                     context,
                     MaterialPageRoute(
                       builder: (_) => const DriverStatusReportPage(),
+                    ),
+                  );
+                },
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.list_alt),
+                title: const Text("Full Details"),
+                subtitle: const Text("Passengers, Drivers, Operators (dummy data)"),
+                trailing: const Icon(Icons.arrow_forward),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const FullDetailsReportPage(),
                     ),
                   );
                 },

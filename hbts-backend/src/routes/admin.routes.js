@@ -8,6 +8,12 @@ import {
   updatePassenger,
   deletePassenger,
 } from "../controllers/adminPassengers.controller.js";
+import {
+  listDrivers,
+  getDriverById,
+  updateDriver,
+  updateDriverStatus,
+} from "../controllers/adminDrivers.controller.js";
 
 const router = express.Router();
 
@@ -44,5 +50,13 @@ router.put("/passengers/:id", updatePassenger);
 
 // DELETE passenger
 router.delete("/passengers/:id", deletePassenger);
+
+/* =========================
+   DRIVERS MANAGEMENT
+========================= */
+router.get("/drivers", listDrivers);
+router.get("/drivers/:id", getDriverById);
+router.put("/drivers/:id", updateDriver);
+router.put("/drivers/:id/status", updateDriverStatus);
 
 export default router;
