@@ -1,35 +1,37 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+
+import '../config.dart';
 import 'token_store.dart';
 
 class NotificationApi {
-  static const String baseUrl =
-      "http://10.0.2.2:4000/api/notifications";
+  static String get _base => "${AppConfig.baseUrl}/api/notifications";
 
   static Future<List<dynamic>> fetchNotifications() async {
     final token = await TokenStore.getAccessToken();
+    if (token == null || token.isEmpty) throw Exception("Missing access token");
 
     final res = await http.get(
-      Uri.parse(baseUrl),
-      headers: {
-        "Authorization": "Bearer $token",
-      },
+      Uri.parse("$_base/me"),
+      headers: {"Authorization": "Bearer $token"},
     );
 
-    if (res.statusCode == 200) {
-      return jsonDecode(res.body);
-    }
-    throw Exception("Failed to load notifications");
+    if (res.statusCode == 200) return jsonDecode(res.body) as List;
+
+    throw Exception("Failed to load notifications (${res.statusCode}): ${res.body}");
   }
 
   static Future<void> markAsRead(String id) async {
     final token = await TokenStore.getAccessToken();
+    if (token == null || token.isEmpty) throw Exception("Missing access token");
 
-    await http.patch(
-      Uri.parse("$baseUrl/$id/read"),
-      headers: {
-        "Authorization": "Bearer $token",
-      },
+    final res = await http.patch(
+      Uri.parse("$_base/me/$id/read"),
+      headers: {"Authorization": "Bearer $token"},
     );
+
+    if (res.statusCode != 200) {
+      throw Exception("Mark as read failed (${res.statusCode}): ${res.body}");
+    }
   }
 }

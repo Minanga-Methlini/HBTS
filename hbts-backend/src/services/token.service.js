@@ -25,7 +25,7 @@ export function signAccessToken(user) {
       type: "ACCESS"     // 🔑 REQUIRED
     },
     process.env.JWT_ACCESS_SECRET,
-    { expiresIn: process.env.ACCESS_TOKEN_EXPIRES_IN || "10m" }
+    { expiresIn: process.env.ACCESS_TOKEN_EXPIRES_IN || "1h" }
   );
 }
 

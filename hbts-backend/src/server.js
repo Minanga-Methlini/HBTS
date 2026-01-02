@@ -16,6 +16,8 @@ import adminRoutes from "./routes/admin.routes.js";
 import tripRoutes from "./routes/trip.routes.js";
 import bookingRoutes from "./routes/booking.routes.js";
 import { startExpirePendingBookingsJob } from "./jobs/expirePendingBookings.job.js";
+import notificationRoutes from "./routes/notification.routes.js";
+
 
 const app = express();
 
@@ -36,6 +38,8 @@ app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/trips", tripRoutes);
 app.use("/api/bookings", bookingRoutes);
+app.use("/api/notifications", notificationRoutes);
+
 
 app.get("/health", (req, res) => res.json({ ok: true }));
 app.get("/", (req, res) => res.send("HBTS Backend is running 🚀"));
