@@ -1,6 +1,8 @@
 // src/controllers/booking.controller.js
 import { pool } from "../db.js";
 import { expirePendingBookingsOnce } from "../jobs/expirePendingBookings.job.js";
+import { buildSeatChangePolicy } from "../utils/seatChangePolicy.js";
+
 
 const TTL_MINUTES = Number(process.env.PENDING_TTL_MINUTES || 10);
 const CUTOFF_MINUTES = Number(process.env.BOOKING_CUTOFF_MINUTES || 10);
@@ -234,7 +236,15 @@ export async function getMyBookings(req, res) {
       [userId]
     );
 
-    return res.json(result.rows);
+    return res.json(
+  result.rows.map((row) => ({
+    ...row,
+    seatChange: buildSeatChangePolicy({
+      departure_time: row.departure_time,
+      trip_status: row.trip_status,
+    }),
+  }))
+);
   } catch (err) {
     console.error("getMyBookings error:", err);
     return res.status(500).json({ message: "Server error" });
@@ -320,16 +330,20 @@ export async function changeBookingSeat(req, res) {
       return res.status(400).json({ message: "Seat change closed (trip started)" });
     }
 
-    const depMs = new Date(trip.departure_time).getTime();
-    const nowMs = Date.now();
+    const seatChange = buildSeatChangePolicy({
+  departure_time: trip.departure_time,
+  trip_status: tripStatus,
+});
 
-    const cutoffMs = depMs - CUTOFF_MINUTES * 60 * 1000;
-    const graceEndMs = depMs + GRACE_AFTER_MINUTES * 60 * 1000;
+if (!seatChange.canChangeSeat) {
+  await client.query("ROLLBACK");
+  return res.status(400).json({
+    code: seatChange.code,
+    message: seatChange.reason,
+    seatChange,
+  });
+}
 
-    if (nowMs >= cutoffMs && nowMs > graceEndMs) {
-      await client.query("ROLLBACK");
-      return res.status(400).json({ message: "Seat change window closed" });
-    }
 
     // 3) Validate seat belongs to this trip bus
     const seatCheck = await client.query(
