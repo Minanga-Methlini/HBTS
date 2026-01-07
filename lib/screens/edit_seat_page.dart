@@ -8,10 +8,15 @@ class EditSeatArgs {
   final int currentSeatId;
   final String currentSeatLabel;
 
+  final bool canChangeSeat;
+  final String? lockReason;
+
   const EditSeatArgs({
     required this.trip,
     required this.currentSeatId,
     required this.currentSeatLabel,
+    required this.canChangeSeat,
+    required this.lockReason,
   });
 }
 
