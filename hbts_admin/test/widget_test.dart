@@ -5,26 +5,39 @@
 // gestures. You can also use WidgetTester to find child widgets in the widget
 // tree, read text, and verify that the values of widget properties are correct.
 
-import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:hbts_admin/main.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  const secureStorageChannel =
+      MethodChannel('plugins.it_nomads.com/flutter_secure_storage');
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+  setUp(() {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    secureStorageChannel.setMockMethodCallHandler((call) async {
+      switch (call.method) {
+        case 'read':
+          return null;
+        case 'write':
+        case 'delete':
+        case 'deleteAll':
+          return null;
+        default:
+          return null;
+      }
+    });
+  });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+  tearDown(() {
+    secureStorageChannel.setMockMethodCallHandler(null);
+  });
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+  testWidgets('App loads login screen when no role', (WidgetTester tester) async {
+    await tester.pumpWidget(const HBTSApp());
+    await tester.pumpAndSettle();
+
+    expect(find.text('Welcome Back!'), findsOneWidget);
   });
 }
