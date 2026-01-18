@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 
 class FullDetailsReportPage extends StatefulWidget {
   const FullDetailsReportPage({super.key});
@@ -125,13 +126,18 @@ class _FullDetailsReportPageState extends State<FullDetailsReportPage>
         children: [
           Padding(
             padding: const EdgeInsets.all(12),
-            child: TextField(
-              decoration: const InputDecoration(
-                hintText: "Search name...",
-                prefixIcon: Icon(Icons.search),
-                border: OutlineInputBorder(),
+            child: Card(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: TextField(
+                  decoration: const InputDecoration(
+                    hintText: "Search name...",
+                    prefixIcon: Icon(Icons.search),
+                    border: InputBorder.none,
+                  ),
+                  onChanged: (v) => setState(() => _search = v.trim()),
+                ),
               ),
-              onChanged: (v) => setState(() => _search = v.trim()),
             ),
           ),
           Expanded(
@@ -168,7 +174,7 @@ class _PassengerList extends StatelessWidget {
           title: p["name"],
           subtitle: "Email: ${p["email"]}\nPhone: ${p["phone"]}\nTrips: ${p["trips"]}",
           badge: p["status"].toString().toUpperCase(),
-          badgeColor: Colors.blue,
+          badgeColor: AppColors.primary,
         );
       },
     );
@@ -182,11 +188,11 @@ class _DriverList extends StatelessWidget {
   Color _statusColor(String status) {
     switch (status.toLowerCase()) {
       case "approved":
-        return Colors.green;
+        return AppColors.success;
       case "pending":
-        return Colors.orange;
+        return AppColors.warning;
       case "rejected":
-        return Colors.red;
+        return AppColors.danger;
       default:
         return Colors.grey;
     }
@@ -234,7 +240,7 @@ class _OperatorList extends StatelessWidget {
           subtitle:
               "Fleet size: ${op["fleetSize"]}\nDrivers: ${op["drivers"]}\nPhone: ${op["phone"]}",
           badge: op["status"].toString().toUpperCase(),
-          badgeColor: Colors.deepPurple,
+          badgeColor: AppColors.accent,
         );
       },
     );

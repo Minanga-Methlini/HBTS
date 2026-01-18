@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/driver_admin_api.dart';
 import 'driver_review_form.dart';
+import '../theme/app_theme.dart';
 
 class DriversDashboard extends StatefulWidget {
   const DriversDashboard({super.key});
@@ -115,6 +116,11 @@ class _DriverListTabState extends State<DriverListTab> {
   @override
   Widget build(BuildContext context) {
     final isPending = widget.status == "pending";
+    final statusColor = widget.status == "approved"
+        ? AppColors.success
+        : widget.status == "pending"
+            ? AppColors.warning
+            : AppColors.danger;
 
     Widget content;
     if (loading) {
@@ -147,27 +153,10 @@ class _DriverListTabState extends State<DriverListTab> {
           final rejectionReason =
               _text(driver, ["rejection_reason", "reason"], fallback: "");
 
-          return Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(10),
-              boxShadow: const [
-                BoxShadow(
-                  color: Colors.black12,
-                  blurRadius: 4,
-                  offset: Offset(0, 2),
-                )
-              ],
-            ),
+          return Card(
             child: ListTile(
-              contentPadding: EdgeInsets.zero,
               leading: CircleAvatar(
-                backgroundColor: widget.status == "approved"
-                    ? Colors.green
-                    : widget.status == "pending"
-                        ? Colors.orange
-                        : Colors.red,
+                backgroundColor: statusColor,
                 child: Icon(
                   widget.status == "approved"
                       ? Icons.check
@@ -194,7 +183,7 @@ class _DriverListTabState extends State<DriverListTab> {
                       child: Text(
                         "Reason: $rejectionReason",
                         style: const TextStyle(
-                          color: Colors.redAccent,
+                          color: AppColors.danger,
                           fontSize: 12,
                         ),
                       ),
@@ -205,21 +194,13 @@ class _DriverListTabState extends State<DriverListTab> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: widget.status == "approved"
-                      ? Colors.green.shade100
-                      : widget.status == "pending"
-                          ? Colors.orange.shade100
-                          : Colors.red.shade100,
+                  color: statusColor.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
                   widget.status.toUpperCase(),
                   style: TextStyle(
-                    color: widget.status == "approved"
-                        ? Colors.green
-                        : widget.status == "pending"
-                            ? Colors.orange
-                            : Colors.red,
+                    color: statusColor,
                     fontWeight: FontWeight.bold,
                   ),
                 ),

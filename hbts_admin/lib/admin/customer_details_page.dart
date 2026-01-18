@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/admin_api.dart';
+import '../theme/app_theme.dart';
 
 class CustomerDetailsPage extends StatefulWidget {
   final int userId;
@@ -173,7 +174,9 @@ class _CustomerDetailsPageState extends State<CustomerDetailsPage> {
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.danger,
+            ),
             child: const Text("Delete"),
           ),
         ],
@@ -209,46 +212,65 @@ class _CustomerDetailsPageState extends State<CustomerDetailsPage> {
 
     return Scaffold(
       appBar: AppBar(title: const Text("Customer Details")),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              customer!["name"] ?? "-",
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      customer!["name"] ?? "-",
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 6),
+                    Text(customer!["email"] ?? "-"),
+                    const SizedBox(height: 4),
+                    Text("Phone: ${customer!["phone"] ?? "-"}"),
+                  ],
+                ),
               ),
             ),
-            const SizedBox(height: 4),
-            Text(customer!["email"] ?? "-"),
-            const SizedBox(height: 4),
-            Text("Phone: ${customer!["phone"] ?? "-"}"),
-            const SizedBox(height: 24),
-
+            const SizedBox(height: 18),
+            Text(
+              "Actions",
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 12),
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                ElevatedButton.icon(
-                  icon: const Icon(Icons.add),
-                  label: const Text("Add"),
-                  onPressed: _addPassenger,
-                ),
-                ElevatedButton.icon(
-                  icon: const Icon(Icons.edit),
-                  label: const Text("Update"),
-                  onPressed: _updatePassenger,
-                ),
-                ElevatedButton.icon(
-                  icon: const Icon(Icons.delete),
-                  label: const Text("Delete"),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
+                Expanded(
+                  child: ElevatedButton.icon(
+                    icon: const Icon(Icons.add),
+                    label: const Text("Add"),
+                    onPressed: _addPassenger,
                   ),
-                  onPressed: _deletePassenger,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.edit),
+                    label: const Text("Update"),
+                    onPressed: _updatePassenger,
+                  ),
                 ),
               ],
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.delete),
+                label: const Text("Delete"),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.danger,
+                ),
+                onPressed: _deletePassenger,
+              ),
             ),
           ],
         ),

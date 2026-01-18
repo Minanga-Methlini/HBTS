@@ -4,6 +4,7 @@ import 'screens/login_page.dart';
 import 'screens/home_page.dart';
 import 'admin/dashboard.dart';
 import 'services/token_store.dart';
+import 'theme/app_theme.dart';
 
 void main() {
   runApp(const HBTSApp());
@@ -27,9 +28,7 @@ class HBTSApp extends StatelessWidget {
     return MaterialApp(
       title: 'HBTS',
       debugShowCheckedModeBanner: false, // ✅ removes DEBUG banner
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
+      theme: AppTheme.build(),
       home: FutureBuilder<Widget>(
         future: _getStartPage(),
         builder: (context, snapshot) {

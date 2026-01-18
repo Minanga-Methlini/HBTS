@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 
 class OperatorsDashboard extends StatefulWidget {
   const OperatorsDashboard({super.key});
@@ -89,22 +90,36 @@ class _OperatorsDashboardState extends State<OperatorsDashboard>
         children: [
           Padding(
             padding: const EdgeInsets.all(12),
-            child: TextField(
-              decoration: const InputDecoration(
-                hintText: "Search operator...",
-                prefixIcon: Icon(Icons.search),
-                border: OutlineInputBorder(),
+            child: Card(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: TextField(
+                  decoration: const InputDecoration(
+                    hintText: "Search operator...",
+                    prefixIcon: Icon(Icons.search),
+                    border: InputBorder.none,
+                  ),
+                  onChanged: (v) => setState(() => _search = v.trim()),
+                ),
               ),
-              onChanged: (v) => setState(() => _search = v.trim()),
             ),
           ),
           Expanded(
             child: TabBarView(
               controller: _tabController,
               children: [
-                _OperatorList(operators: _filtered("active"), badgeColor: Colors.green),
-                _OperatorList(operators: _filtered("inactive"), badgeColor: Colors.orange),
-                _OperatorList(operators: _filtered("suspended"), badgeColor: Colors.red),
+                _OperatorList(
+                  operators: _filtered("active"),
+                  badgeColor: AppColors.success,
+                ),
+                _OperatorList(
+                  operators: _filtered("inactive"),
+                  badgeColor: AppColors.warning,
+                ),
+                _OperatorList(
+                  operators: _filtered("suspended"),
+                  badgeColor: AppColors.danger,
+                ),
               ],
             ),
           ),

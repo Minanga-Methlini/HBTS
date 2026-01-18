@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/admin_api.dart';
 import 'customer_details_page.dart';
+import '../theme/app_theme.dart';
 
 class CustomersPage extends StatefulWidget {
   const CustomersPage({super.key});
@@ -62,75 +63,77 @@ class _CustomersPageState extends State<CustomersPage> {
       ),
       body: Column(
         children: [
-          // 🔍 SEARCH BAR
           Padding(
             padding: const EdgeInsets.all(12),
-            child: TextField(
-              controller: _searchController,
-              onChanged: (value) {
-                _loadPassengers(search: value.trim());
-              },
-              decoration: const InputDecoration(
-                hintText: "Search passenger by name or email",
-                prefixIcon: Icon(Icons.search),
-                border: OutlineInputBorder(),
+            child: Card(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: (value) {
+                    _loadPassengers(search: value.trim());
+                  },
+                  decoration: const InputDecoration(
+                    hintText: "Search passenger by name or email",
+                    prefixIcon: Icon(Icons.search),
+                    border: InputBorder.none,
+                  ),
+                ),
               ),
             ),
           ),
-
           if (_loading) const LinearProgressIndicator(),
-
           if (_error != null)
             Padding(
               padding: const EdgeInsets.all(12),
               child: Text(
                 _error!,
-                style: const TextStyle(color: Colors.red),
+                style: const TextStyle(color: AppColors.danger),
               ),
             ),
-
-          // 📋 PASSENGER LIST
           Expanded(
             child: passengers.isEmpty && !_loading
                 ? const Center(child: Text("No passengers found"))
                 : ListView.separated(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
                     itemCount: passengers.length,
                     separatorBuilder: (_, __) =>
-                        const Divider(height: 1),
+                        const SizedBox(height: 10),
                     itemBuilder: (context, index) {
                       final p =
                           passengers[index] as Map<String, dynamic>;
                       final int userId =
                           (p["user_id"] as num).toInt();
 
-                      return ListTile(
-                        leading: const CircleAvatar(
-                          child: Icon(Icons.person),
-                        ),
-                        title: Text(_safe(p["name"])),
-                        subtitle: Text(
-                          "${_safe(p["email"])} • ${_safe(p["phone"])}",
-                        ),
-                        trailing:
-                            const Icon(Icons.chevron_right),
-
-                        // 🔑 THIS IS THE IMPORTANT FIX
-                        onTap: () async {
-                          await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => CustomerDetailsPage(
-                                userId: userId,
-                              ),
+                      return Card(
+                        child: ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor:
+                                AppColors.primary.withOpacity(0.12),
+                            child: const Icon(
+                              Icons.person,
+                              color: AppColors.primary,
                             ),
-                          );
-
-                          // 🔄 RELOAD LIST AFTER RETURN
-                          _loadPassengers(
-                            search:
-                                _searchController.text.trim(),
-                          );
-                        },
+                          ),
+                          title: Text(_safe(p["name"])),
+                          subtitle: Text(
+                            "${_safe(p["email"])}  -  ${_safe(p["phone"])}",
+                          ),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () async {
+                            await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => CustomerDetailsPage(
+                                  userId: userId,
+                                ),
+                              ),
+                            );
+                            _loadPassengers(
+                              search: _searchController.text.trim(),
+                            );
+                          },
+                        ),
                       );
                     },
                   ),

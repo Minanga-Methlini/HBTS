@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/driver_admin_api.dart';
+import '../theme/app_theme.dart';
 
 class DriverReviewForm extends StatefulWidget {
   final Map<String, dynamic> driverData;
@@ -123,6 +124,13 @@ class _DriverReviewFormState extends State<DriverReviewForm> {
   @override
   Widget build(BuildContext context) {
     final status = _read(["status"]).toUpperCase();
+    final statusColor = status == "APPROVED"
+        ? AppColors.success
+        : status == "PENDING"
+            ? AppColors.warning
+            : status == "REJECTED"
+                ? AppColors.danger
+                : AppColors.primary;
 
     return Scaffold(
       appBar: AppBar(
@@ -135,14 +143,14 @@ class _DriverReviewFormState extends State<DriverReviewForm> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
+                  color: statusColor.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
                   status,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: Colors.blue,
+                    color: statusColor,
                   ),
                 ),
               ),
@@ -197,9 +205,10 @@ class _DriverReviewFormState extends State<DriverReviewForm> {
                 Expanded(
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
+                      backgroundColor: AppColors.success,
                     ),
-                    onPressed: _submitting ? null : () => _changeStatus("approved"),
+                    onPressed:
+                        _submitting ? null : () => _changeStatus("approved"),
                     child:
                         _submitting ? const Text('Working...') : const Text('Approve'),
                   ),
@@ -208,9 +217,10 @@ class _DriverReviewFormState extends State<DriverReviewForm> {
                 Expanded(
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
+                      backgroundColor: AppColors.danger,
                     ),
-                    onPressed: _submitting ? null : () => _changeStatus("rejected"),
+                    onPressed:
+                        _submitting ? null : () => _changeStatus("rejected"),
                     child: _submitting ? const Text('Working...') : const Text('Reject'),
                   ),
                 ),
