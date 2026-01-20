@@ -26,6 +26,10 @@ export function signAccessToken(user) {
     },
     process.env.JWT_ACCESS_SECRET,
     { expiresIn: process.env.ACCESS_TOKEN_EXPIRES_IN || "1h" }
+<<<<<<< HEAD
+=======
+
+>>>>>>> 13f791f (Add tracking, live location, and token updates)
   );
 }
 
