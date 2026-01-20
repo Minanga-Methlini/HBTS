@@ -169,7 +169,7 @@ class _DriverReviewFormState extends State<DriverReviewForm> {
             DropdownButtonFormField<String>(
               value: selectedOperator,
               decoration: const InputDecoration(
-                labelText: 'Operator',
+                labelText: 'Bus Owner',
                 border: OutlineInputBorder(),
               ),
               items: const [

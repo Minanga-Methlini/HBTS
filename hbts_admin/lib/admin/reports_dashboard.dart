@@ -66,7 +66,7 @@ class ReportsDashboard extends StatelessWidget {
                 ),
                 title: const Text("Full Details"),
                 subtitle: const Text(
-                  "Passengers, Drivers, Operators (dummy data)",
+                  "Passengers, Drivers, Bus Owners (dummy data)",
                 ),
                 trailing: const Icon(Icons.arrow_forward),
                 onTap: () {

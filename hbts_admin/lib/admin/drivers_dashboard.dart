@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/driver_admin_api.dart';
-import 'driver_review_form.dart';
+import 'driver_details_page.dart';
 import '../theme/app_theme.dart';
 
 class DriversDashboard extends StatefulWidget {
@@ -146,7 +146,13 @@ class _DriverListTabState extends State<DriverListTab> {
         itemBuilder: (context, index) {
           final driver = drivers[index] as Map<String, dynamic>;
           final id = _id(driver);
-          final name = _text(driver, ["full_name", "name"]);
+          final name = _text(driver, [
+            "full_name",
+            "name",
+            "driver_name",
+            "driverName",
+            "fullName",
+          ]);
           final license = _text(driver, ["license_number", "license"]);
           final operatorName = _text(driver, ["operator_name", "operator"]);
           final phone = _text(driver, ["phone"]);
@@ -174,7 +180,7 @@ class _DriverListTabState extends State<DriverListTab> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text("License: $license"),
-                  Text("Operator: $operatorName"),
+                  Text("Bus Owner: $operatorName"),
                   Text("Phone: $phone"),
                   if (widget.status == "rejected" &&
                       rejectionReason.trim().isNotEmpty)
@@ -205,21 +211,22 @@ class _DriverListTabState extends State<DriverListTab> {
                   ),
                 ),
               ),
-              onTap: isPending && id != null
-                  ? () async {
+              onTap: id == null
+                  ? null
+                  : () async {
                       final changed = await Navigator.push<bool>(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => DriverReviewForm(
-                            driverData: driver,
+                          builder: (_) => DriverDetailsPage(
+                            driverId: id,
+                            statusHint: widget.status,
                           ),
                         ),
                       );
                       if (changed == true) {
                         _load();
                       }
-                    }
-                  : null,
+                    },
             ),
           );
         },

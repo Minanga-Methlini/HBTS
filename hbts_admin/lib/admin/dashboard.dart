@@ -140,7 +140,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         page: const DriversDashboard(),
       ),
       _StatusGroup(
-        title: "Operators",
+        title: "Bus Owners",
         active: 12,
         pending: 2,
         rejected: 1,

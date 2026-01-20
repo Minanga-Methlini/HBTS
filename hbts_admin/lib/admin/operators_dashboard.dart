@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/admin_api.dart';
 import '../theme/app_theme.dart';
 
 class OperatorsDashboard extends StatefulWidget {
@@ -11,47 +12,16 @@ class OperatorsDashboard extends StatefulWidget {
 class _OperatorsDashboardState extends State<OperatorsDashboard>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  final List<Map<String, dynamic>> _dummyOperators = [
-    {
-      "operator_id": 1,
-      "name": "SL Bus Company",
-      "status": "active",
-      "fleetSize": 42,
-      "drivers": 28,
-      "phone": "+94 11 222 3333",
-    },
-    {
-      "operator_id": 2,
-      "name": "City Shuttle",
-      "status": "active",
-      "fleetSize": 25,
-      "drivers": 18,
-      "phone": "+94 77 555 1212",
-    },
-    {
-      "operator_id": 3,
-      "name": "Private Owner Group",
-      "status": "inactive",
-      "fleetSize": 9,
-      "drivers": 6,
-      "phone": "+94 71 900 0001",
-    },
-    {
-      "operator_id": 4,
-      "name": "Northern Transit",
-      "status": "suspended",
-      "fleetSize": 12,
-      "drivers": 10,
-      "phone": "+94 76 210 4321",
-    },
-  ];
-
+  List<Map<String, dynamic>> _owners = [];
+  bool _loading = true;
+  String? _error;
   String _search = "";
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _loadOwners();
   }
 
   @override
@@ -60,14 +30,38 @@ class _OperatorsDashboardState extends State<OperatorsDashboard>
     super.dispose();
   }
 
+  Future<void> _loadOwners() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    try {
+      final data = await AdminApi.getBusOwners();
+      if (!mounted) return;
+      setState(() {
+        _owners = data.cast<Map<String, dynamic>>();
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString();
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _loading = false);
+      }
+    }
+  }
+
   List<Map<String, dynamic>> _filtered(String status) {
-    return _dummyOperators.where((op) {
+    return _owners.where((op) {
       final matchesStatus = op["status"] == status;
       final matchesSearch = _search.isEmpty ||
           op["name"]
               .toString()
-              .toLowerCase()
-              .contains(_search.toLowerCase());
+          .toLowerCase()
+          .contains(_search.toLowerCase());
       return matchesStatus && matchesSearch;
     }).toList();
   }
@@ -76,7 +70,7 @@ class _OperatorsDashboardState extends State<OperatorsDashboard>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Operators Dashboard"),
+        title: const Text("Bus Owners Dashboard"),
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
@@ -95,7 +89,7 @@ class _OperatorsDashboardState extends State<OperatorsDashboard>
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 child: TextField(
                   decoration: const InputDecoration(
-                    hintText: "Search operator...",
+                    hintText: "Search bus owner...",
                     prefixIcon: Icon(Icons.search),
                     border: InputBorder.none,
                   ),
@@ -105,23 +99,30 @@ class _OperatorsDashboardState extends State<OperatorsDashboard>
             ),
           ),
           Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _OperatorList(
-                  operators: _filtered("active"),
-                  badgeColor: AppColors.success,
-                ),
-                _OperatorList(
-                  operators: _filtered("inactive"),
-                  badgeColor: AppColors.warning,
-                ),
-                _OperatorList(
-                  operators: _filtered("suspended"),
-                  badgeColor: AppColors.danger,
-                ),
-              ],
-            ),
+            child: _loading
+                ? const Center(child: CircularProgressIndicator())
+                : _error != null
+                    ? Center(child: Text(_error!))
+                    : RefreshIndicator(
+                        onRefresh: _loadOwners,
+                        child: TabBarView(
+                          controller: _tabController,
+                          children: [
+                            _OperatorList(
+                              operators: _filtered("active"),
+                              badgeColor: AppColors.success,
+                            ),
+                            _OperatorList(
+                              operators: _filtered("inactive"),
+                              badgeColor: AppColors.warning,
+                            ),
+                            _OperatorList(
+                              operators: _filtered("suspended"),
+                              badgeColor: AppColors.danger,
+                            ),
+                          ],
+                        ),
+                      ),
           ),
         ],
       ),
@@ -141,7 +142,7 @@ class _OperatorList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (operators.isEmpty) {
-      return const Center(child: Text("No operators found"));
+      return const Center(child: Text("No bus owners found"));
     }
 
     return ListView.separated(
@@ -166,9 +167,9 @@ class _OperatorList extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 4),
-                Text("Fleet size: ${op["fleetSize"]}"),
-                Text("Drivers: ${op["drivers"]}"),
-                Text("Phone: ${op["phone"]}"),
+                Text("Fleet size: ${op["fleet_size"] ?? 0}"),
+                Text("Drivers: ${op["drivers"] ?? 0}"),
+                Text("Phone: ${op["phone"] ?? "-"}"),
               ],
             ),
             trailing: Container(

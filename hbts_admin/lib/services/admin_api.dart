@@ -171,4 +171,37 @@ class AdminApi {
       throw Exception("Failed to delete passenger (${res.statusCode})");
     }
   }
+
+  // =======================
+  // GET BUS OWNERS (OPERATORS)
+  // GET /admin/operators?status=&search=
+  // =======================
+  static Future<List<dynamic>> getBusOwners({
+    String? status,
+    String search = "",
+  }) async {
+    final query = <String, String>{};
+    if (status != null && status.isNotEmpty) {
+      query["status"] = status;
+    }
+    if (search.isNotEmpty) {
+      query["search"] = search;
+    }
+
+    final uri = Uri.parse("$baseUrl/admin/operators")
+        .replace(queryParameters: query.isEmpty ? null : query);
+
+    final res = await http.get(uri, headers: await _headers());
+
+    if (res.statusCode == 401 || res.statusCode == 403) {
+      throw Exception("Access denied. Admin login required.");
+    }
+
+    if (res.statusCode != 200) {
+      throw Exception("Failed to load bus owners (${res.statusCode})");
+    }
+
+    final data = _decode(res);
+    return data is List ? data : [];
+  }
 }

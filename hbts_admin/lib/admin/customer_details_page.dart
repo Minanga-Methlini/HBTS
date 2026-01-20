@@ -39,123 +39,31 @@ class _CustomerDetailsPageState extends State<CustomerDetailsPage> {
     }
   }
 
-  // ================= ADD =================
-  Future<void> _addPassenger() async {
-    final nameCtrl = TextEditingController();
-    final emailCtrl = TextEditingController();
-    final phoneCtrl = TextEditingController();
-    final passCtrl = TextEditingController();
+  String _safe(dynamic v) => v == null ? "-" : v.toString();
 
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text("Add Passenger"),
-        content: SingleChildScrollView(
-          child: Column(
-            children: [
-              TextField(
-                controller: nameCtrl,
-                decoration: const InputDecoration(labelText: "Name"),
-              ),
-              TextField(
-                controller: emailCtrl,
-                decoration: const InputDecoration(labelText: "Email"),
-              ),
-              TextField(
-                controller: phoneCtrl,
-                decoration: const InputDecoration(labelText: "Phone"),
-              ),
-              TextField(
-                controller: passCtrl,
-                decoration: const InputDecoration(labelText: "Password"),
-                obscureText: true,
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text("Cancel"),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text("Add"),
-          ),
-        ],
-      ),
-    );
-
-    if (ok == true) {
-      await AdminApi.addPassenger({
-        "name": nameCtrl.text.trim(),
-        "email": emailCtrl.text.trim(),
-        "phone": phoneCtrl.text.trim(),
-        "password": passCtrl.text,
-      });
-
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Passenger added successfully")),
-      );
-
-      // 👈 IMPORTANT: go back so list reloads
-      Navigator.pop(context);
-    }
+  String _formatDate(dynamic v) {
+    if (v == null) return "-";
+    final raw = v.toString();
+    return raw.contains("T") ? raw.split("T")[0] : raw;
   }
 
-  // ================= UPDATE =================
-  Future<void> _updatePassenger() async {
-    if (customer == null) return;
-
-    final nameCtrl = TextEditingController(text: customer!["name"]);
-    final phoneCtrl = TextEditingController(text: customer!["phone"]);
-
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text("Update Passenger"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameCtrl,
-              decoration: const InputDecoration(labelText: "Name"),
+  Widget _detailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 110,
+            child: Text(
+              label,
+              style: const TextStyle(fontWeight: FontWeight.w600),
             ),
-            TextField(
-              controller: phoneCtrl,
-              decoration: const InputDecoration(labelText: "Phone"),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text("Cancel"),
           ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text("Update"),
-          ),
+          Expanded(child: Text(value)),
         ],
       ),
     );
-
-    if (ok == true) {
-      await AdminApi.updatePassenger(widget.userId, {
-        "name": nameCtrl.text.trim(),
-        "phone": phoneCtrl.text.trim(),
-      });
-
-      // 🔄 reload from backend (THIS FIXES UPDATE VISIBILITY)
-      await _loadCustomer();
-
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Passenger updated successfully")),
-      );
-    }
   }
 
   // ================= DELETE =================
@@ -192,7 +100,7 @@ class _CustomerDetailsPageState extends State<CustomerDetailsPage> {
         const SnackBar(content: Text("Passenger deleted successfully")),
       );
 
-      Navigator.pop(context); // 👈 back to list
+      Navigator.pop(context);
     }
   }
 
@@ -224,13 +132,27 @@ class _CustomerDetailsPageState extends State<CustomerDetailsPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      customer!["name"] ?? "-",
+                      _safe(customer!["name"]),
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                     const SizedBox(height: 6),
-                    Text(customer!["email"] ?? "-"),
-                    const SizedBox(height: 4),
-                    Text("Phone: ${customer!["phone"] ?? "-"}"),
+                    Text(_safe(customer!["email"])),
+                    const SizedBox(height: 12),
+                    _detailRow("User ID", _safe(customer!["user_id"])),
+                    _detailRow("Phone", _safe(customer!["phone"])),
+                    _detailRow("Role", _safe(customer!["role_name"])),
+                    _detailRow(
+                      "Verified",
+                      _safe(customer!["is_verified"]),
+                    ),
+                    _detailRow(
+                      "Joined",
+                      _formatDate(customer!["created_at"]),
+                    ),
+                    _detailRow(
+                      "Updated",
+                      _formatDate(customer!["updated_at"]),
+                    ),
                   ],
                 ),
               ),
@@ -241,26 +163,6 @@ class _CustomerDetailsPageState extends State<CustomerDetailsPage> {
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    icon: const Icon(Icons.add),
-                    label: const Text("Add"),
-                    onPressed: _addPassenger,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    icon: const Icon(Icons.edit),
-                    label: const Text("Update"),
-                    onPressed: _updatePassenger,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(

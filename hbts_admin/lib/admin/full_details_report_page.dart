@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../services/admin_api.dart';
+import '../services/driver_admin_api.dart';
 import '../theme/app_theme.dart';
 
 class FullDetailsReportPage extends StatefulWidget {
@@ -12,86 +14,18 @@ class _FullDetailsReportPageState extends State<FullDetailsReportPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   String _search = "";
+  bool _loading = true;
+  String? _error;
 
-  final List<Map<String, dynamic>> passengers = [
-    {
-      "name": "Alice Perera",
-      "email": "alice@example.com",
-      "phone": "+94 71 222 3344",
-      "trips": 18,
-      "status": "verified",
-    },
-    {
-      "name": "Bob Silva",
-      "email": "bob@example.com",
-      "phone": "+94 77 888 9900",
-      "trips": 9,
-      "status": "verified",
-    },
-    {
-      "name": "Chathuri Fernando",
-      "email": "chathuri@example.com",
-      "phone": "+94 70 111 2233",
-      "trips": 3,
-      "status": "pending",
-    },
-  ];
-
-  final List<Map<String, dynamic>> drivers = [
-    {
-      "name": "Kasun Jayasinghe",
-      "license": "LIC-DRV-001",
-      "phone": "+94 72 555 6677",
-      "operator": "SL Bus Company",
-      "status": "approved",
-      "trips": 25,
-    },
-    {
-      "name": "Nimali Perera",
-      "license": "LIC-DRV-002",
-      "phone": "+94 71 123 4567",
-      "operator": "City Shuttle",
-      "status": "pending",
-      "trips": 7,
-    },
-    {
-      "name": "Saman Dias",
-      "license": "LIC-DRV-003",
-      "phone": "+94 75 765 4321",
-      "operator": "Private Owner Group",
-      "status": "rejected",
-      "trips": 0,
-    },
-  ];
-
-  final List<Map<String, dynamic>> operators = [
-    {
-      "name": "SL Bus Company",
-      "fleetSize": 42,
-      "drivers": 28,
-      "phone": "+94 11 222 3333",
-      "status": "active",
-    },
-    {
-      "name": "City Shuttle",
-      "fleetSize": 25,
-      "drivers": 18,
-      "phone": "+94 77 555 1212",
-      "status": "active",
-    },
-    {
-      "name": "Private Owner Group",
-      "fleetSize": 9,
-      "drivers": 6,
-      "phone": "+94 71 900 0001",
-      "status": "inactive",
-    },
-  ];
+  List<Map<String, dynamic>> _passengers = [];
+  List<Map<String, dynamic>> _drivers = [];
+  List<Map<String, dynamic>> _owners = [];
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _load();
   }
 
   @override
@@ -100,7 +34,50 @@ class _FullDetailsReportPageState extends State<FullDetailsReportPage>
     super.dispose();
   }
 
-  List<Map<String, dynamic>> _filter(List<Map<String, dynamic>> source, List<String> keys) {
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    final errors = <String>[];
+
+    try {
+      final data = await AdminApi.getPassengers("");
+      _passengers = data.cast<Map<String, dynamic>>();
+    } catch (e) {
+      errors.add("Passengers: ${e.toString()}");
+      _passengers = [];
+    }
+
+    try {
+      final data = await DriverAdminApi.list();
+      _drivers = data.cast<Map<String, dynamic>>();
+    } catch (e) {
+      errors.add("Drivers: ${e.toString()}");
+      _drivers = [];
+    }
+
+    try {
+      final data = await AdminApi.getBusOwners();
+      _owners = data.cast<Map<String, dynamic>>();
+    } catch (e) {
+      errors.add("Bus owners: ${e.toString()}");
+      _owners = [];
+    }
+
+    if (!mounted) return;
+
+    setState(() {
+      _loading = false;
+      _error = errors.isEmpty ? null : errors.join("\n");
+    });
+  }
+
+  List<Map<String, dynamic>> _filter(
+    List<Map<String, dynamic>> source,
+    List<String> keys,
+  ) {
     if (_search.isEmpty) return source;
     final needle = _search.toLowerCase();
     return source.where((item) {
@@ -118,7 +95,7 @@ class _FullDetailsReportPageState extends State<FullDetailsReportPage>
           tabs: const [
             Tab(text: "Passengers"),
             Tab(text: "Drivers"),
-            Tab(text: "Operators"),
+            Tab(text: "Bus Owners"),
           ],
         ),
       ),
@@ -140,15 +117,38 @@ class _FullDetailsReportPageState extends State<FullDetailsReportPage>
               ),
             ),
           ),
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _PassengerList(items: _filter(passengers, ["name", "email", "phone"])),
-                _DriverList(items: _filter(drivers, ["name", "license", "operator", "phone"])),
-                _OperatorList(items: _filter(operators, ["name", "phone"])),
-              ],
+          if (_error != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Text(
+                _error!,
+                style: const TextStyle(color: AppColors.danger),
+              ),
             ),
+          Expanded(
+            child: _loading
+                ? const Center(child: CircularProgressIndicator())
+                : RefreshIndicator(
+                    onRefresh: _load,
+                    child: TabBarView(
+                      controller: _tabController,
+                      children: [
+                        _PassengerList(
+                          items:
+                              _filter(_passengers, ["name", "email", "phone"]),
+                        ),
+                        _DriverList(
+                          items: _filter(
+                            _drivers,
+                            ["name", "license_number", "operator_name", "phone"],
+                          ),
+                        ),
+                        _OwnerList(
+                          items: _filter(_owners, ["name", "phone", "email"]),
+                        ),
+                      ],
+                    ),
+                  ),
           ),
         ],
       ),
@@ -160,6 +160,14 @@ class _PassengerList extends StatelessWidget {
   const _PassengerList({required this.items});
   final List<Map<String, dynamic>> items;
 
+  String _safe(dynamic v) => v == null ? "-" : v.toString();
+
+  String _formatDate(dynamic v) {
+    if (v == null) return "-";
+    final raw = v.toString();
+    return raw.contains("T") ? raw.split("T")[0] : raw;
+  }
+
   @override
   Widget build(BuildContext context) {
     if (items.isEmpty) return const Center(child: Text("No passengers found"));
@@ -170,10 +178,12 @@ class _PassengerList extends StatelessWidget {
       separatorBuilder: (_, __) => const SizedBox(height: 10),
       itemBuilder: (_, index) {
         final p = items[index];
+        final verified = p["is_verified"] == true ? "Verified" : "Unverified";
         return _Tile(
-          title: p["name"],
-          subtitle: "Email: ${p["email"]}\nPhone: ${p["phone"]}\nTrips: ${p["trips"]}",
-          badge: p["status"].toString().toUpperCase(),
+          title: _safe(p["name"]),
+          subtitle:
+              "Email: ${_safe(p["email"])}\nPhone: ${_safe(p["phone"])}\nJoined: ${_formatDate(p["created_at"])}",
+          badge: verified.toUpperCase(),
           badgeColor: AppColors.primary,
         );
       },
@@ -184,6 +194,8 @@ class _PassengerList extends StatelessWidget {
 class _DriverList extends StatelessWidget {
   const _DriverList({required this.items});
   final List<Map<String, dynamic>> items;
+
+  String _safe(dynamic v) => v == null ? "-" : v.toString();
 
   Color _statusColor(String status) {
     switch (status.toLowerCase()) {
@@ -208,12 +220,13 @@ class _DriverList extends StatelessWidget {
       separatorBuilder: (_, __) => const SizedBox(height: 10),
       itemBuilder: (_, index) {
         final d = items[index];
-        final color = _statusColor(d["status"]);
+        final status = _safe(d["status"]);
+        final color = _statusColor(status);
         return _Tile(
-          title: d["name"],
+          title: _safe(d["name"]),
           subtitle:
-              "License: ${d["license"]}\nPhone: ${d["phone"]}\nOperator: ${d["operator"]}\nTrips: ${d["trips"]}",
-          badge: d["status"].toString().toUpperCase(),
+              "License: ${_safe(d["license_number"])}\nPhone: ${_safe(d["phone"])}\nBus Owner: ${_safe(d["operator_name"])}",
+          badge: status.toUpperCase(),
           badgeColor: color,
         );
       },
@@ -221,13 +234,15 @@ class _DriverList extends StatelessWidget {
   }
 }
 
-class _OperatorList extends StatelessWidget {
-  const _OperatorList({required this.items});
+class _OwnerList extends StatelessWidget {
+  const _OwnerList({required this.items});
   final List<Map<String, dynamic>> items;
+
+  String _safe(dynamic v) => v == null ? "-" : v.toString();
 
   @override
   Widget build(BuildContext context) {
-    if (items.isEmpty) return const Center(child: Text("No operators found"));
+    if (items.isEmpty) return const Center(child: Text("No bus owners found"));
 
     return ListView.separated(
       padding: const EdgeInsets.all(12),
@@ -235,11 +250,12 @@ class _OperatorList extends StatelessWidget {
       separatorBuilder: (_, __) => const SizedBox(height: 10),
       itemBuilder: (_, index) {
         final op = items[index];
+        final status = _safe(op["status"]);
         return _Tile(
-          title: op["name"],
+          title: _safe(op["name"]),
           subtitle:
-              "Fleet size: ${op["fleetSize"]}\nDrivers: ${op["drivers"]}\nPhone: ${op["phone"]}",
-          badge: op["status"].toString().toUpperCase(),
+              "Fleet size: ${_safe(op["fleet_size"])}\nDrivers: ${_safe(op["drivers"])}\nPhone: ${_safe(op["phone"])}",
+          badge: status.toUpperCase(),
           badgeColor: AppColors.accent,
         );
       },
