@@ -13,13 +13,21 @@ import { WebSocketServer } from "ws";
 
 import express from "express";
 import cors from "cors";
+import http from "http";
 
 import authRoutes from "./routes/auth.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
 import tripRoutes from "./routes/trip.routes.js";
 import bookingRoutes from "./routes/booking.routes.js";
-import { startExpirePendingBookingsJob } from "./jobs/expirePendingBookings.job.js";
 import notificationRoutes from "./routes/notification.routes.js";
+import { startExpirePendingBookingsJob } from "./jobs/expirePendingBookings.job.js";
+
+import { initRedis } from "./infra/redis.js";
+import { attachTripSocket } from "./ws/trip.socket.js";
+
+import trackingRoutes from "./routes/tracking.routes.js";
+import driverTrackingRoutes from "./routes/driverTracking.routes.js";
+
 
 import { initNotificationWS } from "./ws/notification.ws.js";
 
@@ -43,11 +51,18 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/trips", tripRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/tracking", trackingRoutes);
+app.use("/api/driver-tracking", driverTrackingRoutes);
 
+<<<<<<< HEAD
+=======
+// ✅ Health
+>>>>>>> 13f791f (Add tracking, live location, and token updates)
 app.get("/health", (req, res) => res.json({ ok: true }));
 app.get("/", (req, res) => res.send("HBTS Backend is running 🚀"));
 
 const PORT = process.env.PORT || 4000;
+<<<<<<< HEAD
 
 // ✅ Create HTTP server
 const server = http.createServer(app);
@@ -64,6 +79,24 @@ initNotificationWS(wss);
 server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
+=======
+>>>>>>> 13f791f (Add tracking, live location, and token updates)
 
-console.log("BOOT: starting expirePendingBookings job");
-startExpirePendingBookingsJob();
+async function start() {
+  await initRedis();
+
+  const server = http.createServer(app);
+  attachTripSocket(server);
+
+  server.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+  });
+
+  console.log("BOOT: starting expirePendingBookings job");
+  startExpirePendingBookingsJob();
+}
+
+start().catch((err) => {
+  console.error("BOOT FAILED:", err);
+  process.exit(1);
+});
