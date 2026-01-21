@@ -8,6 +8,7 @@ class EditSeatArgs {
   final int currentSeatId;
   final String currentSeatLabel;
 
+  // ✅ Defaults so old calls won't break
   final bool canChangeSeat;
   final String? lockReason;
 
@@ -15,8 +16,8 @@ class EditSeatArgs {
     required this.trip,
     required this.currentSeatId,
     required this.currentSeatLabel,
-    required this.canChangeSeat,
-    required this.lockReason,
+    this.canChangeSeat = true,
+    this.lockReason,
   });
 }
 
@@ -72,6 +73,7 @@ class _EditSeatPageState extends State<EditSeatPage> {
   }
 
   void _select(Seat seat) {
+    if (!widget.args.canChangeSeat) return; // ✅ block when locked
     if (seat.isBooked) return;
     setState(() => _selectedSeatId = seat.seatId);
   }
@@ -79,6 +81,8 @@ class _EditSeatPageState extends State<EditSeatPage> {
   @override
   Widget build(BuildContext context) {
     final t = widget.args.trip;
+    final locked = !widget.args.canChangeSeat;
+    final lockText = widget.args.lockReason ?? "Seat change is not available for this booking.";
 
     final maxRow = _seats.isEmpty ? 0 : _seats.map((s) => s.seatRow).reduce((a, b) => a > b ? a : b);
     final maxCol = _seats.isEmpty ? 0 : _seats.map((s) => s.seatCol).reduce((a, b) => a > b ? a : b);
@@ -111,6 +115,33 @@ class _EditSeatPageState extends State<EditSeatPage> {
                 Text("Current seat: ${widget.args.currentSeatLabel}",
                     style: TextStyle(color: Colors.grey.shade700)),
                 const SizedBox(height: 12),
+                if (locked) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.shade50,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: Colors.orange.shade200),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.lock, color: Colors.orange.shade800),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            lockText,
+                            style: TextStyle(
+                              color: Colors.orange.shade900,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
                 Row(
                   children: [
                     _Legend(color: Colors.grey.shade300, label: "Available"),
@@ -195,7 +226,7 @@ class _EditSeatPageState extends State<EditSeatPage> {
                 width: double.infinity,
                 height: 54,
                 child: ElevatedButton(
-                  onPressed: _selectedSeatId == null
+                  onPressed: (locked || _selectedSeatId == null)
                       ? null
                       : () => Navigator.pop(context, _selectedSeatId),
                   child: const Text("Save Seat",

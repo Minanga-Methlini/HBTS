@@ -1,10 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import 'app_routes.dart';
 import 'auth/auth_gate.dart';
+import 'state/notification_store.dart';
 
 void main() {
-  runApp(const HBTSApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => NotificationStore()
+        ..refresh()
+        ..startPolling(),
+      child: const HBTSApp(),
+    ),
+  );
 }
 
 class HBTSApp extends StatelessWidget {
