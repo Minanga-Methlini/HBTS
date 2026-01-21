@@ -191,10 +191,7 @@ class _HomePageState extends State<HomePage> {
             userName: user.name,
             photoUrl: user.profileImage,
             onNotifications: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const NotificationsPage()),
-              );
+              Navigator.pushNamed(context, AppRoutes.notifications);
             },
             onProfile: _openProfile,
             onLogout: _logout,
