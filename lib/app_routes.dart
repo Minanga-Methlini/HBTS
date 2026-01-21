@@ -7,6 +7,8 @@ import 'screens/schedule_page.dart';
 import 'screens/my_bookings_page.dart';
 import 'screens/track_my_booking_page.dart';
 import 'screens/track_bus_page.dart';
+import 'screens/notifications_page.dart';
+
 
 import 'screens/trip_details_page.dart';
 import 'screens/seat_selection_page.dart';
@@ -24,6 +26,8 @@ class AppRoutes {
   static const myBookings = '/my-bookings';
   static const trackMyBooking = '/track-my-booking';
   static const trackBus = '/track-bus';
+  static const notifications = '/notifications';
+
 
   static const tripDetails = '/trip-details';
   static const seatSelect = '/seat-select';
@@ -55,6 +59,9 @@ class AppRoutes {
 
       case myBookings:
         return MaterialPageRoute(builder: (_) => const PassengerBookingsPage());
+
+      case notifications:
+        return MaterialPageRoute(builder: (_) => const NotificationsPage());
 
       case trackMyBooking:
         return MaterialPageRoute(builder: (_) => const TrackMyBookingPage());
