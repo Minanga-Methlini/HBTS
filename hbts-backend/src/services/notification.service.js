@@ -15,13 +15,13 @@ const TYPE_DEFINITIONS = {
   },
   TRIP_DELAYED: {
     audience: "passenger",
-    category: "booking",
+    category: "system",
     titleTemplate: "Trip delayed",
     messageTemplate: "Your bus is delayed by {delayMinutes} minutes.",
   },
   TRIP_CANCELLED: {
     audience: "passenger",
-    category: "booking",
+    category: "system",
     titleTemplate: "Trip cancelled",
     messageTemplate: "Your trip from {from} -> {to} has been cancelled.",
   },
@@ -39,13 +39,13 @@ const TYPE_DEFINITIONS = {
   },
   ROUTE_CHANGED: {
     audience: "passenger",
-    category: "booking",
+    category: "system",
     titleTemplate: "Route changed",
     messageTemplate: "Your route has changed: {from} -> {to}.",
   },
   SCHEDULE_CHANGED: {
     audience: "passenger",
-    category: "booking",
+    category: "system",
     titleTemplate: "Schedule changed",
     messageTemplate: "Schedule updated. New departure: {departureTime}.",
   },

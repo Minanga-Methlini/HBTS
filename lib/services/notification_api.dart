@@ -7,19 +7,22 @@ import 'token_store.dart';
 class NotificationApi {
   static String get _base => "${AppConfig.baseUrl}/api/notifications";
 
-  static Future<List<dynamic>> fetchNotifications() async {
-    final token = await TokenStore.getAccessToken();
-    if (token == null || token.isEmpty) throw Exception("Missing access token");
+  static Future<List<Map<String, dynamic>>> fetchNotifications() async {
+  final token = await TokenStore.getAccessToken();
+  if (token == null || token.isEmpty) throw Exception("Missing access token");
 
-    final res = await http.get(
-      Uri.parse("$_base/me"),
-      headers: {"Authorization": "Bearer $token"},
-    );
+  final res = await http.get(
+    Uri.parse("$_base/me"),
+    headers: {"Authorization": "Bearer $token"},
+  );
 
-    if (res.statusCode == 200) return jsonDecode(res.body) as List;
-
-    throw Exception("Failed to load notifications (${res.statusCode}): ${res.body}");
+  if (res.statusCode == 200) {
+    final list = jsonDecode(res.body) as List;
+    return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
   }
+
+  throw Exception("Failed to load notifications (${res.statusCode}): ${res.body}");
+}
 
   static Future<void> markAsRead(String id) async {
     final token = await TokenStore.getAccessToken();

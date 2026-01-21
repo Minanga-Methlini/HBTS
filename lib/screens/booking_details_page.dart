@@ -59,13 +59,16 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
     );
   }
 
-  bool get _canEdit {
+  String? get _lockReason {
     final trip = widget.item.tripStatus.toLowerCase();
     final st = widget.item.status.toLowerCase();
-    if (trip != "scheduled") return false;
-    if (st == "cancelled") return false;
-    return true; // backend will enforce cutoff windows
+
+    if (trip != "scheduled") return "Seat changes are available only for scheduled trips.";
+    if (st == "cancelled") return "This booking is cancelled.";
+    return null; // allowed (backend still enforces time windows)
   }
+
+  bool get _canEdit => _lockReason == null;
 
   @override
   Widget build(BuildContext context) {
@@ -112,6 +115,8 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
                           trip: trip,
                           currentSeatId: _seatId,
                           currentSeatLabel: _seatLabel,
+                          canChangeSeat: _canEdit,
+                          lockReason: _lockReason,
                         ),
                       ),
                     ),
