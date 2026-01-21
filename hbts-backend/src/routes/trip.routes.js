@@ -1,12 +1,12 @@
 // src/routes/trip.routes.js
-import express from "express";
+import { Router } from "express";
 import {
   searchTrips,
   getTripById,
   getTripSeats,
 } from "../controllers/trip.controller.js";
 
-const router = express.Router();
+const router = Router();
 
 // /api/trips?from=&to=&date=
 router.get("/", searchTrips);
