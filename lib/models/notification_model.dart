@@ -62,9 +62,11 @@ class PassengerNotification {
     final category = (json["category"] ?? "").toString();
     final type = (json["type"] ?? "").toString();
     final priority = _priorityFrom(parsedData, category, type);
+    final rawId = json["notification_id"] ?? json["id"] ?? json["notificationId"];
+    final id = rawId is int ? rawId : int.tryParse(rawId?.toString() ?? "") ?? 0;
 
     return PassengerNotification(
-      id: (json["notification_id"] ?? 0) as int,
+      id: id,
       type: type,
       category: category,
       title: (json["title"] ?? "").toString(),
