@@ -8,6 +8,9 @@ const __dirname = path.dirname(__filename);
 // ✅ Load .env from project root (hbts-backend/.env)
 dotenv.config({ path: path.join(__dirname, "../.env") });
 
+import http from "http";
+import { WebSocketServer } from "ws";
+
 import express from "express";
 import cors from "cors";
 
@@ -18,6 +21,7 @@ import bookingRoutes from "./routes/booking.routes.js";
 import { startExpirePendingBookingsJob } from "./jobs/expirePendingBookings.job.js";
 import notificationRoutes from "./routes/notification.routes.js";
 
+import { initNotificationWS } from "./ws/notification.ws.js";
 
 const app = express();
 
@@ -40,12 +44,26 @@ app.use("/api/trips", tripRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/notifications", notificationRoutes);
 
-
 app.get("/health", (req, res) => res.json({ ok: true }));
 app.get("/", (req, res) => res.send("HBTS Backend is running 🚀"));
 
 const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+
+// ✅ Create HTTP server
+const server = http.createServer(app);
+
+// ✅ Attach WebSocket server on a dedicated path
+export const wss = new WebSocketServer({
+  server,
+  path: "/ws/notifications",
+});
+
+// ✅ Attach JWT auth + user-client registry
+initNotificationWS(wss);
+
+server.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+});
 
 console.log("BOOT: starting expirePendingBookings job");
 startExpirePendingBookingsJob();

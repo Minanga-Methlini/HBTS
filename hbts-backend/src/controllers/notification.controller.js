@@ -6,6 +6,9 @@ import {
   getNotificationDefinition,
 } from "../services/notification.service.js";
 
+import { pushNotificationToUser } from "../ws/notification.ws.js";
+
+
 function parsePaging(query) {
   const limit = Math.min(Number(query.limit ?? 50), 200);
   const offset = Math.max(Number(query.offset ?? 0), 0);
@@ -27,16 +30,25 @@ export async function createNotificationHandler(req, res) {
     }
 
     if (def.audience === "passenger" && !userId) {
-      return res.status(400).json({ message: "userId is required for passenger notifications" });
+      return res
+        .status(400)
+        .json({ message: "userId is required for passenger notifications" });
     }
 
     const created = await createNotification({ userId, type, data, title, message });
+
+    // ✅ PUSH REALTIME if passenger notification
+    if (created?.audience === "passenger" && created?.user_id) {
+      pushNotificationToUser(created.user_id, created);
+    }
+
     return res.status(201).json(created);
   } catch (err) {
     console.error("createNotificationHandler error:", err);
     return res.status(500).json({ message: "Server error" });
   }
 }
+
 
 export async function getMyNotifications(req, res) {
   try {
