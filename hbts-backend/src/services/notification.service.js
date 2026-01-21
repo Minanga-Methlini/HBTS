@@ -206,7 +206,11 @@ export async function createNotification({ userId, type, data, title, message })
     ]
   );
 
-  return result.rows[0];
+  const created = result.rows[0];
+
+  // Realtime push is handled in the controller after creation.
+  // Service returns the created row only.
+  return created;
 }
 
 export async function listPassengerNotifications({
