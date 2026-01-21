@@ -54,7 +54,7 @@ class AppRoutes {
         return MaterialPageRoute(builder: (_) => const SchedulePage());
 
       case myBookings:
-        return MaterialPageRoute(builder: (_) => const MyBookingsPage());
+        return MaterialPageRoute(builder: (_) => const PassengerBookingsPage());
 
       case trackMyBooking:
         return MaterialPageRoute(builder: (_) => const TrackMyBookingPage());
