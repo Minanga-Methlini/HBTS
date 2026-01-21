@@ -14,7 +14,7 @@ export function initNotificationWS(wss) {
       }
 
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      const userId = decoded.id;
+      const userId = decoded.userId;
 
       clients.set(userId, ws);
       ws.userId = userId;
