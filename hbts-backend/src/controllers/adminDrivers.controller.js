@@ -447,7 +447,7 @@ export const listDrivers = async (req, res) => {
       if (statusFilter && driverStatusCol) {
         const mappedStatus = driverStatusMap[statusFilter] ?? statusFilter;
         driverConditions.push(
-          `LOWER("${driverStatusCol}") = $${driverConditions.length + 1}`
+          `LOWER(d."${driverStatusCol}") = $${driverConditions.length + 1}`
         );
         driverParams.push(mappedStatus.toLowerCase());
       }
@@ -462,7 +462,7 @@ export const listDrivers = async (req, res) => {
 
       if (search && driverNameCol) {
         driverConditions.push(
-          `(LOWER("${driverNameCol}") LIKE LOWER($${driverConditions.length + 1}))`
+          `(LOWER(d."${driverNameCol}") LIKE LOWER($${driverConditions.length + 1}))`
         );
         driverParams.push(`%${search}%`);
       }
@@ -471,13 +471,21 @@ export const listDrivers = async (req, res) => {
         ? ` WHERE ${driverConditions.join(" AND ")}`
         : "";
 
+      const driverUserIdCol = pickColumn(driverColumns, ["user_id", "userId", "userid"]);
+      const driverJoin = driverUserIdCol
+        ? ` LEFT JOIN users u ON u.user_id = d."${driverUserIdCol}"`
+        : "";
+      const driverSelect = driverUserIdCol
+        ? `SELECT d.*, u.name AS user_name, u.email AS user_email, u.phone AS user_phone`
+        : "SELECT d.*";
+
       const driverIdCol = getIdColumn(driverColumns) ?? "driver_id";
       const driverOrderBy = driverColumns.includes("created_at")
-        ? `"created_at"`
-        : `"${driverIdCol}"`;
+        ? `d."created_at"`
+        : `d."${driverIdCol}"`;
 
       const driverResult = await pool.query(
-        `SELECT * FROM drivers${driverWhere} ORDER BY ${driverOrderBy} DESC`,
+        `${driverSelect} FROM drivers d${driverJoin}${driverWhere} ORDER BY ${driverOrderBy} DESC`,
         driverParams
       );
 
@@ -554,10 +562,17 @@ export const getDriverById = async (req, res) => {
 
     const driverColumns = await getDriverColumns();
     const driverIdCol = getIdColumn(driverColumns) ?? "driver_id";
+    const driverUserIdCol = pickColumn(driverColumns, ["user_id", "userId", "userid"]);
 
     if (driverColumns.length) {
+      const driverJoin = driverUserIdCol
+        ? ` LEFT JOIN users u ON u.user_id = d."${driverUserIdCol}"`
+        : "";
+      const driverSelect = driverUserIdCol
+        ? `SELECT d.*, u.name AS user_name, u.email AS user_email, u.phone AS user_phone`
+        : "SELECT d.*";
       const result = await pool.query(
-        `SELECT * FROM drivers WHERE "${driverIdCol}" = $1 LIMIT 1`,
+        `${driverSelect} FROM drivers d${driverJoin} WHERE d."${driverIdCol}" = $1 LIMIT 1`,
         [id]
       );
 

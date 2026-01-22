@@ -204,4 +204,47 @@ class AdminApi {
     final data = _decode(res);
     return data is List ? data : [];
   }
+
+  // =======================
+  // GET BUSES
+  // GET /admin/buses
+  // =======================
+  static Future<List<dynamic>> getBuses({
+    int? busId,
+    int? operatorId,
+    String? licensePlateNo,
+    String? routeNo,
+    int? capacity,
+    String? serviceType,
+  }) async {
+    final query = <String, String>{};
+    if (busId != null) query["busId"] = busId.toString();
+    if (operatorId != null) query["operatorId"] = operatorId.toString();
+    if (licensePlateNo != null && licensePlateNo.isNotEmpty) {
+      query["licensePlateNo"] = licensePlateNo;
+    }
+    if (routeNo != null && routeNo.isNotEmpty) {
+      query["routeNo"] = routeNo;
+    }
+    if (capacity != null) query["capacity"] = capacity.toString();
+    if (serviceType != null && serviceType.isNotEmpty) {
+      query["serviceType"] = serviceType;
+    }
+
+    final uri = Uri.parse("$baseUrl/admin/buses")
+        .replace(queryParameters: query.isEmpty ? null : query);
+
+    final res = await http.get(uri, headers: await _headers());
+
+    if (res.statusCode == 401 || res.statusCode == 403) {
+      throw Exception("Access denied. Admin login required.");
+    }
+
+    if (res.statusCode != 200) {
+      throw Exception("Failed to load buses (${res.statusCode})");
+    }
+
+    final data = _decode(res);
+    return data is List ? data : [];
+  }
 }

@@ -28,6 +28,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
   int _driverActive = 0;
   int _driverPending = 0;
   int _driverRejected = 0;
+  int _ownerActive = 0;
+  int _ownerInactive = 0;
+  int _ownerSuspended = 0;
+  List<_ChartSlice> _busSlices = const [];
 
   @override
   void initState() {
@@ -44,20 +48,28 @@ class _AdminDashboardState extends State<AdminDashboard> {
           DriverAdminApi.list(status: "pending");
       final rejectedDriversFuture =
           DriverAdminApi.list(status: "rejected");
+      final busesFuture = AdminApi.getBuses();
+      final busOwnersFuture = AdminApi.getBusOwners();
 
       final results = await Future.wait([
         passengersFuture,
         approvedDriversFuture,
         pendingDriversFuture,
         rejectedDriversFuture,
+        busesFuture,
+        busOwnersFuture,
       ]);
 
       final passengers = results[0] as List<dynamic>;
       final approvedDrivers = results[1] as List<dynamic>;
       final pendingDrivers = results[2] as List<dynamic>;
       final rejectedDrivers = results[3] as List<dynamic>;
+      final buses = results[4] as List<dynamic>;
+      final busOwners = results[5] as List<dynamic>;
 
       final passengerCounts = _countPassengerStatuses(passengers);
+      final busSlices = _buildBusSlices(buses);
+      final ownerCounts = _countOwnerStatuses(busOwners);
 
       if (!mounted) return;
       setState(() {
@@ -67,6 +79,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
         _driverActive = approvedDrivers.length;
         _driverPending = pendingDrivers.length;
         _driverRejected = rejectedDrivers.length;
+        _ownerActive = ownerCounts.active;
+        _ownerInactive = ownerCounts.inactive;
+        _ownerSuspended = ownerCounts.suspended;
+        _busSlices = busSlices;
         _loading = false;
         _error = null;
       });
@@ -122,6 +138,62 @@ class _AdminDashboardState extends State<AdminDashboard> {
     return value.isEmpty ? "active" : value;
   }
 
+  List<_ChartSlice> _buildBusSlices(List<dynamic> buses) {
+    final counts = <String, int>{};
+    for (final item in buses) {
+      if (item is! Map<String, dynamic>) continue;
+      final type = item["service_type"]?.toString().trim();
+      if (type == null || type.isEmpty) continue;
+      counts[type] = (counts[type] ?? 0) + 1;
+    }
+
+    final sorted = counts.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    const colors = [
+      AppColors.success,
+      AppColors.warning,
+      AppColors.danger,
+      AppColors.primary,
+      AppColors.primarySoft,
+      AppColors.accent,
+    ];
+
+    return [
+      for (var i = 0; i < sorted.length; i++)
+        _ChartSlice(
+          label: sorted[i].key,
+          value: sorted[i].value,
+          color: colors[i % colors.length],
+        ),
+    ];
+  }
+
+  _OwnerCounts _countOwnerStatuses(List<dynamic> owners) {
+    var active = 0;
+    var inactive = 0;
+    var suspended = 0;
+
+    for (final item in owners) {
+      if (item is! Map<String, dynamic>) continue;
+      final status =
+          item["status"]?.toString().toLowerCase().trim() ?? "inactive";
+      if (status == "active") {
+        active += 1;
+      } else if (status == "suspended") {
+        suspended += 1;
+      } else {
+        inactive += 1;
+      }
+    }
+
+    return _OwnerCounts(
+      active: active,
+      inactive: inactive,
+      suspended: suspended,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final groups = [
@@ -141,9 +213,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
       ),
       _StatusGroup(
         title: "Bus Owners",
-        active: 12,
-        pending: 2,
-        rejected: 1,
+        active: _ownerActive,
+        pending: _ownerInactive,
+        rejected: _ownerSuspended,
         page: const OperatorsDashboard(),
       ),
     ];
@@ -153,11 +225,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
         subtitle: "Availability overview",
         icon: Icons.directions_bus_rounded,
         page: const BusesPage(),
-        slices: const [
-          _ChartSlice(label: "Available", value: 28, color: AppColors.success),
-          _ChartSlice(label: "In service", value: 6, color: AppColors.warning),
-          _ChartSlice(label: "Unavailable", value: 3, color: AppColors.danger),
-        ],
+        slices: _busSlices.isEmpty
+            ? const [
+                _ChartSlice(
+                  label: "No data",
+                  value: 0,
+                  color: AppColors.outline,
+                ),
+              ]
+            : _busSlices,
       ),
       _DashboardItem(
         title: "Schedule",
@@ -319,6 +395,18 @@ class _StatusCounts {
     required this.active,
     required this.pending,
     required this.rejected,
+  });
+}
+
+class _OwnerCounts {
+  final int active;
+  final int inactive;
+  final int suspended;
+
+  const _OwnerCounts({
+    required this.active,
+    required this.inactive,
+    required this.suspended,
   });
 }
 

@@ -14,6 +14,8 @@ import {
   updateDriver,
   updateDriverStatus,
 } from "../controllers/adminDrivers.controller.js";
+import { listOperators } from "../controllers/adminOperators.controller.js";
+import { listBuses } from "../controllers/adminBuses.controller.js";
 
 const router = express.Router();
 
@@ -58,5 +60,15 @@ router.get("/drivers", listDrivers);
 router.get("/drivers/:id", getDriverById);
 router.put("/drivers/:id", updateDriver);
 router.put("/drivers/:id/status", updateDriverStatus);
+
+/* =========================
+   BUS OWNERS (OPERATORS)
+========================= */
+router.get("/operators", listOperators);
+
+/* =========================
+   BUSES
+========================= */
+router.get("/buses", listBuses);
 
 export default router;
