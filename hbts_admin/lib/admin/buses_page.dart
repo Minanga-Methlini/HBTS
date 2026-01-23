@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../services/admin_api.dart';
 import 'bus_card.dart';
+import 'bus_form_page.dart';
+import 'bus_history_page.dart';
 import 'bus_search_page.dart';
 import '../theme/app_theme.dart';
 
@@ -46,6 +48,33 @@ class _BusesPageState extends State<BusesPage> {
     }
   }
 
+  Future<void> _openAddRecord() async {
+    final changed = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const BusFormPage()),
+    );
+    if (changed == true) {
+      await _loadBuses();
+    }
+  }
+
+  Future<void> _openEdit(Map<String, dynamic> bus) async {
+    final changed = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => BusFormPage(bus: bus)),
+    );
+    if (changed == true) {
+      await _loadBuses();
+    }
+  }
+
+  Future<void> _openHistory() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const BusHistoryPage()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -54,20 +83,42 @@ class _BusesPageState extends State<BusesPage> {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
-            child: SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const BusSearchPage()),
+            child: Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                SizedBox(
+                  width: 160,
+                  child: ElevatedButton.icon(
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const BusSearchPage()),
+                    ),
+                    icon: const Icon(Icons.search),
+                    label: const Text("Search"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.danger,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
                 ),
-                icon: const Icon(Icons.search),
-                label: const Text("Search"),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.danger,
-                  foregroundColor: Colors.white,
+                SizedBox(
+                  width: 170,
+                  child: ElevatedButton.icon(
+                    onPressed: _openAddRecord,
+                    icon: const Icon(Icons.add_circle_outline),
+                    label: const Text("Add Record"),
+                  ),
                 ),
-              ),
+                SizedBox(
+                  width: 150,
+                  child: OutlinedButton.icon(
+                    onPressed: _openHistory,
+                    icon: const Icon(Icons.history),
+                    label: const Text("History"),
+                  ),
+                ),
+              ],
             ),
           ),
           Expanded(
@@ -90,7 +141,10 @@ class _BusesPageState extends State<BusesPage> {
                                 separatorBuilder: (_, __) =>
                                     const SizedBox(height: 12),
                                 itemBuilder: (_, index) {
-                                  return BusCard(bus: _buses[index]);
+                                  return BusCard(
+                                    bus: _buses[index],
+                                    onTap: () => _openEdit(_buses[index]),
+                                  );
                                 },
                               ),
                       ),

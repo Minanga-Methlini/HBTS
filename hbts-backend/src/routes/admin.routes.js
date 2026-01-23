@@ -15,7 +15,30 @@ import {
   updateDriverStatus,
 } from "../controllers/adminDrivers.controller.js";
 import { listOperators } from "../controllers/adminOperators.controller.js";
-import { listBuses } from "../controllers/adminBuses.controller.js";
+import {
+  addBus,
+  deleteBus,
+  listBuses,
+  listDeletedBuses,
+  updateBus,
+} from "../controllers/adminBuses.controller.js";
+import {
+  addRoute,
+  deleteRoute,
+  listDeletedRoutes,
+  listRoutes,
+  updateRoute,
+} from "../controllers/adminRoutes.controller.js";
+import {
+  addTrip,
+  deleteTrip,
+  listDeletedTrips,
+  listAssignableDrivers,
+  listTripLocationHistory,
+  listTrips,
+  listTripStops,
+  updateTrip,
+} from "../controllers/adminTrips.controller.js";
 
 const router = express.Router();
 
@@ -70,5 +93,30 @@ router.get("/operators", listOperators);
    BUSES
 ========================= */
 router.get("/buses", listBuses);
+router.get("/buses/history", listDeletedBuses);
+router.post("/buses", addBus);
+router.put("/buses/:id", updateBus);
+router.delete("/buses/:id", deleteBus);
+
+/* =========================
+   ROUTES
+========================= */
+router.get("/routes", listRoutes);
+router.get("/routes/history", listDeletedRoutes);
+router.post("/routes", addRoute);
+router.put("/routes/:id", updateRoute);
+router.delete("/routes/:id", deleteRoute);
+
+/* =========================
+   TRIPS
+========================= */
+router.get("/trips", listTrips);
+router.get("/trips/history", listDeletedTrips);
+router.get("/trips/assignable-drivers", listAssignableDrivers);
+router.post("/trips", addTrip);
+router.put("/trips/:id", updateTrip);
+router.delete("/trips/:id", deleteTrip);
+router.get("/trips/:id/stops", listTripStops);
+router.get("/trips/:id/location-history", listTripLocationHistory);
 
 export default router;

@@ -1,23 +1,24 @@
 import 'package:flutter/material.dart';
 import '../services/admin_api.dart';
 import '../theme/app_theme.dart';
-import 'bus_card.dart';
-import 'bus_form_page.dart';
+import 'trip_card.dart';
+import 'trip_details_page.dart';
 
-class BusSearchPage extends StatefulWidget {
-  const BusSearchPage({super.key});
+class TripSearchPage extends StatefulWidget {
+  const TripSearchPage({super.key});
 
   @override
-  State<BusSearchPage> createState() => _BusSearchPageState();
+  State<TripSearchPage> createState() => _TripSearchPageState();
 }
 
-class _BusSearchPageState extends State<BusSearchPage> {
-  final _busIdCtrl = TextEditingController();
+class _TripSearchPageState extends State<TripSearchPage> {
+  final _tripIdCtrl = TextEditingController();
+  final _routeIdCtrl = TextEditingController();
   final _operatorIdCtrl = TextEditingController();
-  final _plateCtrl = TextEditingController();
-  final _routeCtrl = TextEditingController();
-  final _capacityCtrl = TextEditingController();
-  final _serviceTypeCtrl = TextEditingController();
+  final _busIdCtrl = TextEditingController();
+  final _driverIdCtrl = TextEditingController();
+  final _statusCtrl = TextEditingController();
+  final _dateCtrl = TextEditingController();
 
   List<Map<String, dynamic>> _results = [];
   bool _loading = false;
@@ -25,13 +26,24 @@ class _BusSearchPageState extends State<BusSearchPage> {
 
   @override
   void dispose() {
-    _busIdCtrl.dispose();
+    _tripIdCtrl.dispose();
+    _routeIdCtrl.dispose();
     _operatorIdCtrl.dispose();
-    _plateCtrl.dispose();
-    _routeCtrl.dispose();
-    _capacityCtrl.dispose();
-    _serviceTypeCtrl.dispose();
+    _busIdCtrl.dispose();
+    _driverIdCtrl.dispose();
+    _statusCtrl.dispose();
+    _dateCtrl.dispose();
     super.dispose();
+  }
+
+  int? _parseInt(String raw, String label) {
+    final value = raw.trim();
+    if (value.isEmpty) return null;
+    final parsed = int.tryParse(value);
+    if (parsed == null) {
+      throw Exception("Invalid number for $label");
+    }
+    return parsed;
   }
 
   Future<void> _search() async {
@@ -41,17 +53,20 @@ class _BusSearchPageState extends State<BusSearchPage> {
     });
 
     try {
+      final tripId = _parseInt(_tripIdCtrl.text, "Trip Id");
+      final routeId = _parseInt(_routeIdCtrl.text, "Route Id");
+      final operatorId = _parseInt(_operatorIdCtrl.text, "Operator Id");
       final busId = _parseInt(_busIdCtrl.text, "Bus Id");
-      final operatorId = _parseInt(_operatorIdCtrl.text, "Bus Owner Id");
-      final capacity = _parseInt(_capacityCtrl.text, "Capacity");
+      final driverId = _parseInt(_driverIdCtrl.text, "Driver Id");
 
-      final data = await AdminApi.getBuses(
-        busId: busId,
+      final data = await AdminApi.getTrips(
+        tripId: tripId,
+        routeId: routeId,
         operatorId: operatorId,
-        licensePlateNo: _plateCtrl.text.trim(),
-        routeNo: _routeCtrl.text.trim(),
-        capacity: capacity,
-        serviceType: _serviceTypeCtrl.text.trim(),
+        busId: busId,
+        driverId: driverId,
+        status: _statusCtrl.text.trim(),
+        tripDate: _dateCtrl.text.trim(),
       );
 
       if (!mounted) return;
@@ -70,23 +85,14 @@ class _BusSearchPageState extends State<BusSearchPage> {
     }
   }
 
-  int? _parseInt(String raw, String label) {
-    final value = raw.trim();
-    if (value.isEmpty) return null;
-    final parsed = int.tryParse(value);
-    if (parsed == null) {
-      throw Exception("Invalid number for $label");
-    }
-    return parsed;
-  }
-
   void _clearAll() {
-    _busIdCtrl.clear();
+    _tripIdCtrl.clear();
+    _routeIdCtrl.clear();
     _operatorIdCtrl.clear();
-    _plateCtrl.clear();
-    _routeCtrl.clear();
-    _capacityCtrl.clear();
-    _serviceTypeCtrl.clear();
+    _busIdCtrl.clear();
+    _driverIdCtrl.clear();
+    _statusCtrl.clear();
+    _dateCtrl.clear();
     setState(() {
       _results = [];
       _error = null;
@@ -94,10 +100,10 @@ class _BusSearchPageState extends State<BusSearchPage> {
     });
   }
 
-  Future<void> _openEdit(Map<String, dynamic> bus) async {
+  Future<void> _openDetails(Map<String, dynamic> trip) async {
     final changed = await Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => BusFormPage(bus: bus)),
+      MaterialPageRoute(builder: (_) => TripDetailsPage(trip: trip)),
     );
     if (changed == true) {
       await _search();
@@ -146,7 +152,7 @@ class _BusSearchPageState extends State<BusSearchPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Search Buses")),
+      appBar: AppBar(title: const Text("Search Trips")),
       body: Column(
         children: [
           Padding(
@@ -178,31 +184,37 @@ class _BusSearchPageState extends State<BusSearchPage> {
                           physics: const NeverScrollableScrollPhysics(),
                           children: [
                             _buildSearchTile(
+                              label: "Trip Id",
+                              controller: _tripIdCtrl,
+                              keyboardType: TextInputType.number,
+                            ),
+                            _buildSearchTile(
+                              label: "Route Id",
+                              controller: _routeIdCtrl,
+                              keyboardType: TextInputType.number,
+                            ),
+                            _buildSearchTile(
+                              label: "Operator Id",
+                              controller: _operatorIdCtrl,
+                              keyboardType: TextInputType.number,
+                            ),
+                            _buildSearchTile(
                               label: "Bus Id",
                               controller: _busIdCtrl,
                               keyboardType: TextInputType.number,
                             ),
                             _buildSearchTile(
-                              label: "Bus Owner Id",
-                              controller: _operatorIdCtrl,
+                              label: "Driver Id",
+                              controller: _driverIdCtrl,
                               keyboardType: TextInputType.number,
                             ),
                             _buildSearchTile(
-                              label: "License Plate Number",
-                              controller: _plateCtrl,
+                              label: "Status",
+                              controller: _statusCtrl,
                             ),
                             _buildSearchTile(
-                              label: "Route",
-                              controller: _routeCtrl,
-                            ),
-                            _buildSearchTile(
-                              label: "Capacity",
-                              controller: _capacityCtrl,
-                              keyboardType: TextInputType.number,
-                            ),
-                            _buildSearchTile(
-                              label: "Service Type",
-                              controller: _serviceTypeCtrl,
+                              label: "Trip Date",
+                              controller: _dateCtrl,
                             ),
                           ],
                         );
@@ -237,17 +249,16 @@ class _BusSearchPageState extends State<BusSearchPage> {
                         ),
                       )
                     : _results.isEmpty
-                        ? const Center(child: Text("No buses found"))
+                        ? const Center(child: Text("No trips found"))
                         : ListView.separated(
                             padding: const EdgeInsets.all(12),
                             itemCount: _results.length,
                             separatorBuilder: (_, __) =>
                                 const SizedBox(height: 12),
-                            itemBuilder: (_, index) =>
-                                BusCard(
-                                  bus: _results[index],
-                                  onTap: () => _openEdit(_results[index]),
-                                ),
+                            itemBuilder: (_, index) => TripCard(
+                              trip: _results[index],
+                              onTap: () => _openDetails(_results[index]),
+                            ),
                           ),
           ),
         ],

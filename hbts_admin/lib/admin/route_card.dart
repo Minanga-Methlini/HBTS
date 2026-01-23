@@ -1,23 +1,43 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
-class BusCard extends StatelessWidget {
-  const BusCard({super.key, required this.bus, this.onTap});
+class RouteCard extends StatelessWidget {
+  const RouteCard({super.key, required this.route, this.onTap});
 
-  final Map<String, dynamic> bus;
+  final Map<String, dynamic> route;
   final VoidCallback? onTap;
+
+  String _pickString(List<String> keys, {String fallback = "-"}) {
+    for (final key in keys) {
+      final value = route[key];
+      if (value != null && value.toString().trim().isNotEmpty) {
+        return value.toString();
+      }
+    }
+    return fallback;
+  }
 
   @override
   Widget build(BuildContext context) {
-    final plate = bus["license_plate_no"]?.toString() ?? "-";
-    final route = bus["route_no"]?.toString() ?? "-";
-    final model = bus["model"]?.toString() ?? "-";
-    final serviceType = bus["service_type"]?.toString() ?? "-";
-    final capacity = bus["capacity"]?.toString() ?? "-";
-    final operatorId = bus["operator_id"]?.toString() ?? "-";
-    final operatorName = bus["operator_name"]?.toString();
-    final createdAt = _formatDate(bus["created_at"]);
-    final updatedAt = _formatDate(bus["updated_at"]);
+    final id = _pickString(["route_id", "id"], fallback: "-");
+    final name = _pickString(["route_name", "name"], fallback: "Route $id");
+    final code = _pickString(
+      ["route_no", "route_number", "route_code", "code"],
+      fallback: "-",
+    );
+    final origin = _pickString(
+      ["origin", "start_point", "start", "from_location", "from"],
+      fallback: "-",
+    );
+    final destination = _pickString(
+      ["destination", "end_point", "end", "to_location", "to"],
+      fallback: "-",
+    );
+    final distance = _pickString(["distance_km", "distance"], fallback: "-");
+    final fare = _pickString(["fare", "price"], fallback: "-");
+    final status = _pickString(["status", "route_status"], fallback: "unknown");
+    final createdAt = _formatDate(route["created_at"]);
+    final updatedAt = _formatDate(route["updated_at"]);
 
     return Card(
       elevation: 3,
@@ -40,7 +60,7 @@ class BusCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: const Icon(
-                      Icons.directions_bus_rounded,
+                      Icons.alt_route_rounded,
                       color: AppColors.primary,
                     ),
                   ),
@@ -50,7 +70,7 @@ class BusCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          plate,
+                          name,
                           style:
                               Theme.of(context).textTheme.titleLarge?.copyWith(
                                     color: AppColors.textPrimary,
@@ -59,15 +79,15 @@ class BusCard extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          "Route: $route | Model: $model",
+                          "$origin -> $destination",
                           style: Theme.of(context).textTheme.bodyMedium,
                         ),
                       ],
                     ),
                   ),
                   _Badge(
-                    text: serviceType,
-                    color: _serviceTypeColor(serviceType),
+                    text: status,
+                    color: _statusColor(status),
                   ),
                 ],
               ),
@@ -76,16 +96,13 @@ class BusCard extends StatelessWidget {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  _Tag(text: "Capacity: $capacity"),
-                  _Tag(text: "Bus ID: ${bus["bus_id"] ?? "-"}"),
-                  _Tag(text: "Operator ID: $operatorId"),
+                  _Tag(text: "Code: $code"),
+                  _Tag(text: "Distance: $distance"),
+                  _Tag(text: "Fare: $fare"),
                 ],
               ),
               const SizedBox(height: 12),
-              _InfoRow(
-                label: "Operator",
-                value: operatorName ?? operatorId,
-              ),
+              _InfoRow(label: "Route ID", value: id),
               const SizedBox(height: 6),
               _InfoRow(label: "Created", value: createdAt),
               const SizedBox(height: 6),
@@ -193,13 +210,11 @@ String _formatDate(dynamic value) {
   return "$y-$m-$d";
 }
 
-Color _serviceTypeColor(String value) {
+Color _statusColor(String value) {
   final normalized = value.toLowerCase().trim();
-  if (normalized.contains("semi")) return AppColors.danger;
-  if (normalized.contains("luxery")) return AppColors.success;
-  if (normalized.contains("luxury")) return AppColors.success;
-  if (normalized.contains("normal")) return AppColors.warning;
+  if (normalized.contains("active")) return AppColors.success;
+  if (normalized.contains("pause")) return AppColors.warning;
+  if (normalized.contains("inactive")) return AppColors.warning;
+  if (normalized.contains("suspend")) return AppColors.danger;
   return AppColors.primary;
 }
-
-

@@ -247,4 +247,401 @@ class AdminApi {
     final data = _decode(res);
     return data is List ? data : [];
   }
+
+  // =======================
+  // ADD BUS
+  // POST /admin/buses
+  // =======================
+  static Future<Map<String, dynamic>> addBus(
+    Map<String, dynamic> data,
+  ) async {
+    final uri = Uri.parse("$baseUrl/admin/buses");
+
+    final res = await http.post(
+      uri,
+      headers: await _headers(),
+      body: jsonEncode(data),
+    );
+
+    if (res.statusCode != 201) {
+      throw Exception("Failed to add bus (${res.statusCode})");
+    }
+
+    final decoded = _decode(res);
+    return decoded is Map<String, dynamic> ? decoded : {};
+  }
+
+  // =======================
+  // UPDATE BUS
+  // PUT /admin/buses/:id
+  // =======================
+  static Future<Map<String, dynamic>> updateBus(
+    int id,
+    Map<String, dynamic> data,
+  ) async {
+    final uri = Uri.parse("$baseUrl/admin/buses/$id");
+
+    final res = await http.put(
+      uri,
+      headers: await _headers(),
+      body: jsonEncode(data),
+    );
+
+    if (res.statusCode != 200) {
+      throw Exception("Failed to update bus (${res.statusCode})");
+    }
+
+    final decoded = _decode(res);
+    return decoded is Map<String, dynamic> ? decoded : {};
+  }
+
+  // =======================
+  // DELETE BUS (SOFT DELETE)
+  // DELETE /admin/buses/:id
+  // =======================
+  static Future<void> deleteBus(int id) async {
+    final uri = Uri.parse("$baseUrl/admin/buses/$id");
+
+    final res = await http.delete(
+      uri,
+      headers: await _headers(),
+    );
+
+    if (res.statusCode != 200) {
+      throw Exception("Failed to delete bus (${res.statusCode})");
+    }
+  }
+
+  // =======================
+  // BUS HISTORY (DELETED)
+  // GET /admin/buses/history
+  // =======================
+  static Future<List<dynamic>> getBusHistory() async {
+    final uri = Uri.parse("$baseUrl/admin/buses/history");
+
+    final res = await http.get(uri, headers: await _headers());
+
+    if (res.statusCode == 401 || res.statusCode == 403) {
+      throw Exception("Access denied. Admin login required.");
+    }
+
+    if (res.statusCode != 200) {
+      throw Exception("Failed to load bus history (${res.statusCode})");
+    }
+
+    final data = _decode(res);
+    return data is List ? data : [];
+  }
+
+  // =======================
+  // GET ROUTES
+  // GET /admin/routes
+  // =======================
+  static Future<List<dynamic>> getRoutes({
+    int? routeId,
+    String? name,
+    String? code,
+    String? origin,
+    String? destination,
+    String? status,
+  }) async {
+    final query = <String, String>{};
+    if (routeId != null) query["routeId"] = routeId.toString();
+    if (name != null && name.isNotEmpty) query["name"] = name;
+    if (code != null && code.isNotEmpty) query["code"] = code;
+    if (origin != null && origin.isNotEmpty) query["origin"] = origin;
+    if (destination != null && destination.isNotEmpty) {
+      query["destination"] = destination;
+    }
+    if (status != null && status.isNotEmpty) query["status"] = status;
+
+    final uri = Uri.parse("$baseUrl/admin/routes")
+        .replace(queryParameters: query.isEmpty ? null : query);
+
+    final res = await http.get(uri, headers: await _headers());
+
+    if (res.statusCode == 401 || res.statusCode == 403) {
+      throw Exception("Access denied. Admin login required.");
+    }
+
+    if (res.statusCode != 200) {
+      throw Exception("Failed to load routes (${res.statusCode})");
+    }
+
+    final data = _decode(res);
+    return data is List ? data : [];
+  }
+
+  // =======================
+  // ADD ROUTE
+  // POST /admin/routes
+  // =======================
+  static Future<Map<String, dynamic>> addRoute(
+    Map<String, dynamic> data,
+  ) async {
+    final uri = Uri.parse("$baseUrl/admin/routes");
+
+    final res = await http.post(
+      uri,
+      headers: await _headers(),
+      body: jsonEncode(data),
+    );
+
+    if (res.statusCode != 201) {
+      throw Exception("Failed to add route (${res.statusCode})");
+    }
+
+    final decoded = _decode(res);
+    return decoded is Map<String, dynamic> ? decoded : {};
+  }
+
+  // =======================
+  // UPDATE ROUTE
+  // PUT /admin/routes/:id
+  // =======================
+  static Future<Map<String, dynamic>> updateRoute(
+    int id,
+    Map<String, dynamic> data,
+  ) async {
+    final uri = Uri.parse("$baseUrl/admin/routes/$id");
+
+    final res = await http.put(
+      uri,
+      headers: await _headers(),
+      body: jsonEncode(data),
+    );
+
+    if (res.statusCode != 200) {
+      throw Exception("Failed to update route (${res.statusCode})");
+    }
+
+    final decoded = _decode(res);
+    return decoded is Map<String, dynamic> ? decoded : {};
+  }
+
+  // =======================
+  // DELETE ROUTE (SOFT DELETE)
+  // DELETE /admin/routes/:id
+  // =======================
+  static Future<void> deleteRoute(int id) async {
+    final uri = Uri.parse("$baseUrl/admin/routes/$id");
+
+    final res = await http.delete(
+      uri,
+      headers: await _headers(),
+    );
+
+    if (res.statusCode != 200) {
+      throw Exception("Failed to delete route (${res.statusCode})");
+    }
+  }
+
+  // =======================
+  // ROUTE HISTORY (DELETED)
+  // GET /admin/routes/history
+  // =======================
+  static Future<List<dynamic>> getRouteHistory() async {
+    final uri = Uri.parse("$baseUrl/admin/routes/history");
+
+    final res = await http.get(uri, headers: await _headers());
+
+    if (res.statusCode == 401 || res.statusCode == 403) {
+      throw Exception("Access denied. Admin login required.");
+    }
+
+    if (res.statusCode != 200) {
+      throw Exception("Failed to load route history (${res.statusCode})");
+    }
+
+    final data = _decode(res);
+    return data is List ? data : [];
+  }
+
+  // =======================
+  // GET TRIPS
+  // GET /admin/trips
+  // =======================
+  static Future<List<dynamic>> getTrips({
+    int? tripId,
+    int? routeId,
+    int? operatorId,
+    int? busId,
+    int? driverId,
+    String? status,
+    String? tripDate,
+  }) async {
+    final query = <String, String>{};
+    if (tripId != null) query["tripId"] = tripId.toString();
+    if (routeId != null) query["routeId"] = routeId.toString();
+    if (operatorId != null) query["operatorId"] = operatorId.toString();
+    if (busId != null) query["busId"] = busId.toString();
+    if (driverId != null) query["driverId"] = driverId.toString();
+    if (status != null && status.isNotEmpty) query["status"] = status;
+    if (tripDate != null && tripDate.isNotEmpty) query["tripDate"] = tripDate;
+
+    final uri = Uri.parse("$baseUrl/admin/trips")
+        .replace(queryParameters: query.isEmpty ? null : query);
+
+    final res = await http.get(uri, headers: await _headers());
+
+    if (res.statusCode == 401 || res.statusCode == 403) {
+      throw Exception("Access denied. Admin login required.");
+    }
+
+    if (res.statusCode != 200) {
+      throw Exception("Failed to load trips (${res.statusCode})");
+    }
+
+    final data = _decode(res);
+    return data is List ? data : [];
+  }
+
+  // =======================
+  // ADD TRIP
+  // POST /admin/trips
+  // =======================
+  static Future<Map<String, dynamic>> addTrip(
+    Map<String, dynamic> data,
+  ) async {
+    final uri = Uri.parse("$baseUrl/admin/trips");
+
+    final res = await http.post(
+      uri,
+      headers: await _headers(),
+      body: jsonEncode(data),
+    );
+
+    if (res.statusCode != 201) {
+      throw Exception("Failed to add trip (${res.statusCode})");
+    }
+
+    final decoded = _decode(res);
+    return decoded is Map<String, dynamic> ? decoded : {};
+  }
+
+  // =======================
+  // UPDATE TRIP
+  // PUT /admin/trips/:id
+  // =======================
+  static Future<Map<String, dynamic>> updateTrip(
+    int id,
+    Map<String, dynamic> data,
+  ) async {
+    final uri = Uri.parse("$baseUrl/admin/trips/$id");
+
+    final res = await http.put(
+      uri,
+      headers: await _headers(),
+      body: jsonEncode(data),
+    );
+
+    if (res.statusCode != 200) {
+      throw Exception("Failed to update trip (${res.statusCode})");
+    }
+
+    final decoded = _decode(res);
+    return decoded is Map<String, dynamic> ? decoded : {};
+  }
+
+  // =======================
+  // DELETE TRIP (SOFT DELETE)
+  // DELETE /admin/trips/:id
+  // =======================
+  static Future<void> deleteTrip(int id) async {
+    final uri = Uri.parse("$baseUrl/admin/trips/$id");
+
+    final res = await http.delete(
+      uri,
+      headers: await _headers(),
+    );
+
+    if (res.statusCode != 200) {
+      throw Exception("Failed to delete trip (${res.statusCode})");
+    }
+  }
+
+  // =======================
+  // TRIP HISTORY (DELETED)
+  // GET /admin/trips/history
+  // =======================
+  static Future<List<dynamic>> getTripHistory() async {
+    final uri = Uri.parse("$baseUrl/admin/trips/history");
+
+    final res = await http.get(uri, headers: await _headers());
+
+    if (res.statusCode == 401 || res.statusCode == 403) {
+      throw Exception("Access denied. Admin login required.");
+    }
+
+    if (res.statusCode != 200) {
+      throw Exception("Failed to load trip history (${res.statusCode})");
+    }
+
+    final data = _decode(res);
+    return data is List ? data : [];
+  }
+
+  // =======================
+  // TRIP STOPS
+  // GET /admin/trips/:id/stops
+  // =======================
+  static Future<List<dynamic>> getTripStops(int tripId) async {
+    final uri = Uri.parse("$baseUrl/admin/trips/$tripId/stops");
+
+    final res = await http.get(uri, headers: await _headers());
+
+    if (res.statusCode == 401 || res.statusCode == 403) {
+      throw Exception("Access denied. Admin login required.");
+    }
+
+    if (res.statusCode != 200) {
+      throw Exception("Failed to load trip stops (${res.statusCode})");
+    }
+
+    final data = _decode(res);
+    return data is List ? data : [];
+  }
+
+  // =======================
+  // TRIP LOCATION HISTORY
+  // GET /admin/trips/:id/location-history
+  // =======================
+  static Future<List<dynamic>> getTripLocationHistory(int tripId) async {
+    final uri =
+        Uri.parse("$baseUrl/admin/trips/$tripId/location-history");
+
+    final res = await http.get(uri, headers: await _headers());
+
+    if (res.statusCode == 401 || res.statusCode == 403) {
+      throw Exception("Access denied. Admin login required.");
+    }
+
+    if (res.statusCode != 200) {
+      throw Exception("Failed to load trip location history (${res.statusCode})");
+    }
+
+    final data = _decode(res);
+    return data is List ? data : [];
+  }
+
+  // =======================
+  // ASSIGNABLE DRIVERS
+  // GET /admin/trips/assignable-drivers
+  // =======================
+  static Future<List<dynamic>> getAssignableDrivers() async {
+    final uri = Uri.parse("$baseUrl/admin/trips/assignable-drivers");
+
+    final res = await http.get(uri, headers: await _headers());
+
+    if (res.statusCode == 401 || res.statusCode == 403) {
+      throw Exception("Access denied. Admin login required.");
+    }
+
+    if (res.statusCode != 200) {
+      throw Exception("Failed to load drivers (${res.statusCode})");
+    }
+
+    final data = _decode(res);
+    return data is List ? data : [];
+  }
 }

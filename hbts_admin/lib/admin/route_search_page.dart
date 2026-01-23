@@ -1,23 +1,23 @@
 import 'package:flutter/material.dart';
 import '../services/admin_api.dart';
 import '../theme/app_theme.dart';
-import 'bus_card.dart';
-import 'bus_form_page.dart';
+import 'route_card.dart';
+import 'route_form_page.dart';
 
-class BusSearchPage extends StatefulWidget {
-  const BusSearchPage({super.key});
+class RouteSearchPage extends StatefulWidget {
+  const RouteSearchPage({super.key});
 
   @override
-  State<BusSearchPage> createState() => _BusSearchPageState();
+  State<RouteSearchPage> createState() => _RouteSearchPageState();
 }
 
-class _BusSearchPageState extends State<BusSearchPage> {
-  final _busIdCtrl = TextEditingController();
-  final _operatorIdCtrl = TextEditingController();
-  final _plateCtrl = TextEditingController();
-  final _routeCtrl = TextEditingController();
-  final _capacityCtrl = TextEditingController();
-  final _serviceTypeCtrl = TextEditingController();
+class _RouteSearchPageState extends State<RouteSearchPage> {
+  final _routeIdCtrl = TextEditingController();
+  final _nameCtrl = TextEditingController();
+  final _codeCtrl = TextEditingController();
+  final _originCtrl = TextEditingController();
+  final _destinationCtrl = TextEditingController();
+  final _statusCtrl = TextEditingController();
 
   List<Map<String, dynamic>> _results = [];
   bool _loading = false;
@@ -25,13 +25,23 @@ class _BusSearchPageState extends State<BusSearchPage> {
 
   @override
   void dispose() {
-    _busIdCtrl.dispose();
-    _operatorIdCtrl.dispose();
-    _plateCtrl.dispose();
-    _routeCtrl.dispose();
-    _capacityCtrl.dispose();
-    _serviceTypeCtrl.dispose();
+    _routeIdCtrl.dispose();
+    _nameCtrl.dispose();
+    _codeCtrl.dispose();
+    _originCtrl.dispose();
+    _destinationCtrl.dispose();
+    _statusCtrl.dispose();
     super.dispose();
+  }
+
+  int? _parseInt(String raw, String label) {
+    final value = raw.trim();
+    if (value.isEmpty) return null;
+    final parsed = int.tryParse(value);
+    if (parsed == null) {
+      throw Exception("Invalid number for $label");
+    }
+    return parsed;
   }
 
   Future<void> _search() async {
@@ -41,17 +51,14 @@ class _BusSearchPageState extends State<BusSearchPage> {
     });
 
     try {
-      final busId = _parseInt(_busIdCtrl.text, "Bus Id");
-      final operatorId = _parseInt(_operatorIdCtrl.text, "Bus Owner Id");
-      final capacity = _parseInt(_capacityCtrl.text, "Capacity");
-
-      final data = await AdminApi.getBuses(
-        busId: busId,
-        operatorId: operatorId,
-        licensePlateNo: _plateCtrl.text.trim(),
-        routeNo: _routeCtrl.text.trim(),
-        capacity: capacity,
-        serviceType: _serviceTypeCtrl.text.trim(),
+      final routeId = _parseInt(_routeIdCtrl.text, "Route Id");
+      final data = await AdminApi.getRoutes(
+        routeId: routeId,
+        name: _nameCtrl.text.trim(),
+        code: _codeCtrl.text.trim(),
+        origin: _originCtrl.text.trim(),
+        destination: _destinationCtrl.text.trim(),
+        status: _statusCtrl.text.trim(),
       );
 
       if (!mounted) return;
@@ -70,23 +77,13 @@ class _BusSearchPageState extends State<BusSearchPage> {
     }
   }
 
-  int? _parseInt(String raw, String label) {
-    final value = raw.trim();
-    if (value.isEmpty) return null;
-    final parsed = int.tryParse(value);
-    if (parsed == null) {
-      throw Exception("Invalid number for $label");
-    }
-    return parsed;
-  }
-
   void _clearAll() {
-    _busIdCtrl.clear();
-    _operatorIdCtrl.clear();
-    _plateCtrl.clear();
-    _routeCtrl.clear();
-    _capacityCtrl.clear();
-    _serviceTypeCtrl.clear();
+    _routeIdCtrl.clear();
+    _nameCtrl.clear();
+    _codeCtrl.clear();
+    _originCtrl.clear();
+    _destinationCtrl.clear();
+    _statusCtrl.clear();
     setState(() {
       _results = [];
       _error = null;
@@ -94,10 +91,10 @@ class _BusSearchPageState extends State<BusSearchPage> {
     });
   }
 
-  Future<void> _openEdit(Map<String, dynamic> bus) async {
+  Future<void> _openEdit(Map<String, dynamic> route) async {
     final changed = await Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => BusFormPage(bus: bus)),
+      MaterialPageRoute(builder: (_) => RouteFormPage(route: route)),
     );
     if (changed == true) {
       await _search();
@@ -146,7 +143,7 @@ class _BusSearchPageState extends State<BusSearchPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Search Buses")),
+      appBar: AppBar(title: const Text("Search Routes")),
       body: Column(
         children: [
           Padding(
@@ -178,31 +175,29 @@ class _BusSearchPageState extends State<BusSearchPage> {
                           physics: const NeverScrollableScrollPhysics(),
                           children: [
                             _buildSearchTile(
-                              label: "Bus Id",
-                              controller: _busIdCtrl,
+                              label: "Route Id",
+                              controller: _routeIdCtrl,
                               keyboardType: TextInputType.number,
                             ),
                             _buildSearchTile(
-                              label: "Bus Owner Id",
-                              controller: _operatorIdCtrl,
-                              keyboardType: TextInputType.number,
+                              label: "Route Name",
+                              controller: _nameCtrl,
                             ),
                             _buildSearchTile(
-                              label: "License Plate Number",
-                              controller: _plateCtrl,
+                              label: "Route Code",
+                              controller: _codeCtrl,
                             ),
                             _buildSearchTile(
-                              label: "Route",
-                              controller: _routeCtrl,
+                              label: "Origin",
+                              controller: _originCtrl,
                             ),
                             _buildSearchTile(
-                              label: "Capacity",
-                              controller: _capacityCtrl,
-                              keyboardType: TextInputType.number,
+                              label: "Destination",
+                              controller: _destinationCtrl,
                             ),
                             _buildSearchTile(
-                              label: "Service Type",
-                              controller: _serviceTypeCtrl,
+                              label: "Status",
+                              controller: _statusCtrl,
                             ),
                           ],
                         );
@@ -237,17 +232,16 @@ class _BusSearchPageState extends State<BusSearchPage> {
                         ),
                       )
                     : _results.isEmpty
-                        ? const Center(child: Text("No buses found"))
+                        ? const Center(child: Text("No routes found"))
                         : ListView.separated(
                             padding: const EdgeInsets.all(12),
                             itemCount: _results.length,
                             separatorBuilder: (_, __) =>
                                 const SizedBox(height: 12),
-                            itemBuilder: (_, index) =>
-                                BusCard(
-                                  bus: _results[index],
-                                  onTap: () => _openEdit(_results[index]),
-                                ),
+                            itemBuilder: (_, index) => RouteCard(
+                              route: _results[index],
+                              onTap: () => _openEdit(_results[index]),
+                            ),
                           ),
           ),
         ],

@@ -5,7 +5,6 @@ import 'drivers_dashboard.dart';
 import 'operators_dashboard.dart';
 import 'reports_dashboard.dart';
 import 'buses_page.dart';
-import 'schedule_page.dart';
 import 'routes_page.dart';
 import 'trips_page.dart';
 import '../services/admin_api.dart';
@@ -32,6 +31,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
   int _ownerInactive = 0;
   int _ownerSuspended = 0;
   List<_ChartSlice> _busSlices = const [];
+  List<_ChartSlice> _routeSlices = const [];
+  List<_ChartSlice> _tripSlices = const [];
 
   @override
   void initState() {
@@ -50,6 +51,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
           DriverAdminApi.list(status: "rejected");
       final busesFuture = AdminApi.getBuses();
       final busOwnersFuture = AdminApi.getBusOwners();
+      final routesFuture = AdminApi.getRoutes();
+      final tripsFuture = AdminApi.getTrips();
 
       final results = await Future.wait([
         passengersFuture,
@@ -58,6 +61,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
         rejectedDriversFuture,
         busesFuture,
         busOwnersFuture,
+        routesFuture,
+        tripsFuture,
       ]);
 
       final passengers = results[0] as List<dynamic>;
@@ -66,9 +71,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
       final rejectedDrivers = results[3] as List<dynamic>;
       final buses = results[4] as List<dynamic>;
       final busOwners = results[5] as List<dynamic>;
+      final routes = results[6] as List<dynamic>;
+      final trips = results[7] as List<dynamic>;
 
       final passengerCounts = _countPassengerStatuses(passengers);
       final busSlices = _buildBusSlices(buses);
+      final routeSlices = _buildRouteSlices(routes);
+      final tripSlices = _buildTripSlices(trips);
       final ownerCounts = _countOwnerStatuses(busOwners);
 
       if (!mounted) return;
@@ -83,6 +92,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
         _ownerInactive = ownerCounts.inactive;
         _ownerSuspended = ownerCounts.suspended;
         _busSlices = busSlices;
+        _routeSlices = routeSlices;
+        _tripSlices = tripSlices;
         _loading = false;
         _error = null;
       });
@@ -169,6 +180,78 @@ class _AdminDashboardState extends State<AdminDashboard> {
     ];
   }
 
+  List<_ChartSlice> _buildRouteSlices(List<dynamic> routes) {
+    final counts = <String, int>{};
+    for (final item in routes) {
+      if (item is! Map<String, dynamic>) continue;
+      final label =
+          item["route_name"]?.toString().trim().isNotEmpty == true
+              ? item["route_name"].toString().trim()
+              : item["name"]?.toString().trim().isNotEmpty == true
+                  ? item["name"].toString().trim()
+                  : item["route_no"]?.toString().trim().isNotEmpty == true
+                      ? item["route_no"].toString().trim()
+                      : item["route_code"]?.toString().trim().isNotEmpty == true
+                          ? item["route_code"].toString().trim()
+                          : item["route_number"]?.toString().trim().isNotEmpty ==
+                                  true
+                              ? item["route_number"].toString().trim()
+                              : "Route";
+      counts[label] = (counts[label] ?? 0) + 1;
+    }
+
+    final sorted = counts.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    const colors = [
+      AppColors.accent,
+      AppColors.primary,
+      AppColors.primarySoft,
+      AppColors.success,
+      AppColors.warning,
+      AppColors.danger,
+    ];
+
+    return [
+      for (var i = 0; i < sorted.length; i++)
+        _ChartSlice(
+          label: sorted[i].key,
+          value: sorted[i].value,
+          color: colors[i % colors.length],
+        ),
+    ];
+  }
+
+  List<_ChartSlice> _buildTripSlices(List<dynamic> trips) {
+    final counts = <String, int>{};
+    for (final item in trips) {
+      if (item is! Map<String, dynamic>) continue;
+      final status = item["status"]?.toString().trim().toLowerCase();
+      final label = (status == null || status.isEmpty) ? "scheduled" : status;
+      counts[label] = (counts[label] ?? 0) + 1;
+    }
+
+    final sorted = counts.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    const colors = [
+      AppColors.warning,
+      AppColors.accent,
+      AppColors.success,
+      AppColors.danger,
+      AppColors.primary,
+    ];
+
+    return [
+      for (var i = 0; i < sorted.length; i++)
+        _ChartSlice(
+          label: sorted[i].key,
+          value: sorted[i].value,
+          color: colors[i % colors.length],
+        ),
+    ];
+  }
+
   _OwnerCounts _countOwnerStatuses(List<dynamic> owners) {
     var active = 0;
     var inactive = 0;
@@ -236,37 +319,34 @@ class _AdminDashboardState extends State<AdminDashboard> {
             : _busSlices,
       ),
       _DashboardItem(
-        title: "Schedule",
-        subtitle: "Daily service status",
-        icon: Icons.event_available_rounded,
-        page: const SchedulePage(),
-        slices: const [
-          _ChartSlice(label: "On time", value: 18, color: AppColors.success),
-          _ChartSlice(label: "Delayed", value: 5, color: AppColors.warning),
-          _ChartSlice(label: "Cancelled", value: 2, color: AppColors.danger),
-        ],
-      ),
-      _DashboardItem(
         title: "Routes",
         subtitle: "Network overview",
         icon: Icons.alt_route_rounded,
         page: const RoutesPage(),
-        slices: const [
-          _ChartSlice(label: "Active", value: 14, color: AppColors.success),
-          _ChartSlice(label: "All routes", value: 19, color: AppColors.warning),
-          _ChartSlice(label: "Paused", value: 1, color: AppColors.danger),
-        ],
+        slices: _routeSlices.isEmpty
+            ? const [
+                _ChartSlice(
+                  label: "No data",
+                  value: 0,
+                  color: AppColors.outline,
+                ),
+              ]
+            : _routeSlices,
       ),
       _DashboardItem(
         title: "Trips",
         subtitle: "Daily trip stats",
         icon: Icons.route_rounded,
         page: const TripsPage(),
-        slices: const [
-          _ChartSlice(label: "Completed", value: 96, color: AppColors.success),
-          _ChartSlice(label: "In progress", value: 12, color: AppColors.warning),
-          _ChartSlice(label: "Cancelled", value: 4, color: AppColors.danger),
-        ],
+        slices: _tripSlices.isEmpty
+            ? const [
+                _ChartSlice(
+                  label: "No data",
+                  value: 0,
+                  color: AppColors.outline,
+                ),
+              ]
+            : _tripSlices,
       ),
     ];
 

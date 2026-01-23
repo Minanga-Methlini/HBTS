@@ -1,23 +1,29 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
-class BusCard extends StatelessWidget {
-  const BusCard({super.key, required this.bus, this.onTap});
+class TripCard extends StatelessWidget {
+  const TripCard({super.key, required this.trip, this.onTap});
 
-  final Map<String, dynamic> bus;
+  final Map<String, dynamic> trip;
   final VoidCallback? onTap;
+
+  String _value(String key, {String fallback = "-"}) {
+    final v = trip[key];
+    if (v == null || v.toString().trim().isEmpty) return fallback;
+    return v.toString();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final plate = bus["license_plate_no"]?.toString() ?? "-";
-    final route = bus["route_no"]?.toString() ?? "-";
-    final model = bus["model"]?.toString() ?? "-";
-    final serviceType = bus["service_type"]?.toString() ?? "-";
-    final capacity = bus["capacity"]?.toString() ?? "-";
-    final operatorId = bus["operator_id"]?.toString() ?? "-";
-    final operatorName = bus["operator_name"]?.toString();
-    final createdAt = _formatDate(bus["created_at"]);
-    final updatedAt = _formatDate(bus["updated_at"]);
+    final tripId = _value("trip_id");
+    final routeName = _value("route_name", fallback: _value("route_code"));
+    final routeCode = _value("route_code");
+    final plate = _value("license_plate_no");
+    final driverName = _value("driver_name");
+    final tripDate = _formatDate(trip["trip_date"]);
+    final departure = _formatDateTime(trip["departure_time"]);
+    final arrival = _formatDateTime(trip["arrival_time"]);
+    final status = _value("status", fallback: "scheduled");
 
     return Card(
       elevation: 3,
@@ -40,7 +46,7 @@ class BusCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: const Icon(
-                      Icons.directions_bus_rounded,
+                      Icons.route_rounded,
                       color: AppColors.primary,
                     ),
                   ),
@@ -50,7 +56,7 @@ class BusCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          plate,
+                          routeName.isEmpty ? "Trip $tripId" : routeName,
                           style:
                               Theme.of(context).textTheme.titleLarge?.copyWith(
                                     color: AppColors.textPrimary,
@@ -59,16 +65,13 @@ class BusCard extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          "Route: $route | Model: $model",
+                          "Route: $routeCode | Bus: $plate",
                           style: Theme.of(context).textTheme.bodyMedium,
                         ),
                       ],
                     ),
                   ),
-                  _Badge(
-                    text: serviceType,
-                    color: _serviceTypeColor(serviceType),
-                  ),
+                  _Badge(text: status, color: _statusColor(status)),
                 ],
               ),
               const SizedBox(height: 12),
@@ -76,20 +79,16 @@ class BusCard extends StatelessWidget {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  _Tag(text: "Capacity: $capacity"),
-                  _Tag(text: "Bus ID: ${bus["bus_id"] ?? "-"}"),
-                  _Tag(text: "Operator ID: $operatorId"),
+                  _Tag(text: "Trip ID: $tripId"),
+                  _Tag(text: "Driver: $driverName"),
                 ],
               ),
               const SizedBox(height: 12),
-              _InfoRow(
-                label: "Operator",
-                value: operatorName ?? operatorId,
-              ),
+              _InfoRow(label: "Date", value: tripDate),
               const SizedBox(height: 6),
-              _InfoRow(label: "Created", value: createdAt),
+              _InfoRow(label: "Depart", value: departure),
               const SizedBox(height: 6),
-              _InfoRow(label: "Updated", value: updatedAt),
+              _InfoRow(label: "Arrive", value: arrival),
             ],
           ),
         ),
@@ -193,13 +192,24 @@ String _formatDate(dynamic value) {
   return "$y-$m-$d";
 }
 
-Color _serviceTypeColor(String value) {
-  final normalized = value.toLowerCase().trim();
-  if (normalized.contains("semi")) return AppColors.danger;
-  if (normalized.contains("luxery")) return AppColors.success;
-  if (normalized.contains("luxury")) return AppColors.success;
-  if (normalized.contains("normal")) return AppColors.warning;
-  return AppColors.primary;
+String _formatDateTime(dynamic value) {
+  if (value == null) return "-";
+  final raw = value.toString();
+  final parsed = DateTime.tryParse(raw);
+  if (parsed == null) return raw;
+  final y = parsed.year.toString().padLeft(4, "0");
+  final m = parsed.month.toString().padLeft(2, "0");
+  final d = parsed.day.toString().padLeft(2, "0");
+  final h = parsed.hour.toString().padLeft(2, "0");
+  final min = parsed.minute.toString().padLeft(2, "0");
+  return "$y-$m-$d $h:$min";
 }
 
-
+Color _statusColor(String value) {
+  final normalized = value.toLowerCase().trim();
+  if (normalized.contains("schedule")) return AppColors.warning;
+  if (normalized.contains("progress")) return AppColors.accent;
+  if (normalized.contains("complete")) return AppColors.success;
+  if (normalized.contains("cancel")) return AppColors.danger;
+  return AppColors.primary;
+}
