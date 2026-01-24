@@ -13,17 +13,35 @@ class TripCard extends StatelessWidget {
     return v.toString();
   }
 
+  String _valueAny(List<String> keys, {String fallback = "-"}) {
+    for (final key in keys) {
+      final value = _value(key, fallback: "");
+      if (value.trim().isNotEmpty) return value;
+    }
+    return fallback;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final tripId = _value("trip_id");
-    final routeName = _value("route_name", fallback: _value("route_code"));
-    final routeCode = _value("route_code");
-    final plate = _value("license_plate_no");
-    final driverName = _value("driver_name");
-    final tripDate = _formatDate(trip["trip_date"]);
-    final departure = _formatDateTime(trip["departure_time"]);
-    final arrival = _formatDateTime(trip["arrival_time"]);
-    final status = _value("status", fallback: "scheduled");
+    final tripId = _valueAny(["trip_id", "tripId", "id"]);
+    final routeName =
+        _valueAny(["route_name", "routeName", "name"], fallback: _valueAny([
+      "route_code",
+      "route_no",
+      "routeCode",
+    ]));
+    final routeCode = _valueAny(["route_code", "route_no", "routeCode"]);
+    final plate =
+        _valueAny(["license_plate_no", "license_plate", "plate_no"]);
+    final driverName =
+        _valueAny(["driver_name", "driverName", "full_name", "name"]);
+    final tripDate = _formatDate(trip["trip_date"] ?? trip["tripDate"]);
+    final departure =
+        _formatDateTime(trip["departure_time"] ?? trip["departureTime"]);
+    final arrival =
+        _formatDateTime(trip["arrival_time"] ?? trip["arrivalTime"]);
+    final status = _valueAny(["status"], fallback: "scheduled");
+    final statusLabel = _statusLabel(status);
 
     return Card(
       elevation: 3,
@@ -71,7 +89,7 @@ class TripCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  _Badge(text: status, color: _statusColor(status)),
+                  _Badge(text: statusLabel, color: _statusColor(status)),
                 ],
               ),
               const SizedBox(height: 12),
@@ -205,11 +223,16 @@ String _formatDateTime(dynamic value) {
   return "$y-$m-$d $h:$min";
 }
 
+String _statusLabel(String value) {
+  final normalized = value.toLowerCase().trim();
+  if (normalized.contains("progress")) return "running";
+  return normalized.isEmpty ? "scheduled" : value;
+}
+
 Color _statusColor(String value) {
   final normalized = value.toLowerCase().trim();
-  if (normalized.contains("schedule")) return AppColors.warning;
+  if (normalized.contains("cancel")) return AppColors.danger;
   if (normalized.contains("progress")) return AppColors.accent;
   if (normalized.contains("complete")) return AppColors.success;
-  if (normalized.contains("cancel")) return AppColors.danger;
-  return AppColors.primary;
+  return AppColors.warning;
 }

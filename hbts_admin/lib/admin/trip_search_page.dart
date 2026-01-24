@@ -105,7 +105,7 @@ class _TripSearchPageState extends State<TripSearchPage> {
       context,
       MaterialPageRoute(builder: (_) => TripDetailsPage(trip: trip)),
     );
-    if (changed == true) {
+    if (changed == true || changed is Map) {
       await _search();
     }
   }

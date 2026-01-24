@@ -50,7 +50,7 @@ class _TripsPageState extends State<TripsPage> {
       context,
       MaterialPageRoute(builder: (_) => const TripFormPage()),
     );
-    if (changed == true) {
+    if (changed == true || changed is Map) {
       await _loadTrips();
     }
   }
@@ -60,7 +60,7 @@ class _TripsPageState extends State<TripsPage> {
       context,
       MaterialPageRoute(builder: (_) => TripDetailsPage(trip: trip)),
     );
-    if (changed == true) {
+    if (changed == true || changed is Map) {
       await _loadTrips();
     }
   }

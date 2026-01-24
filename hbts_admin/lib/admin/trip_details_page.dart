@@ -14,6 +14,7 @@ class TripDetailsPage extends StatefulWidget {
 
 class _TripDetailsPageState extends State<TripDetailsPage>
     with SingleTickerProviderStateMixin {
+  late Map<String, dynamic> _trip;
   late final TabController _tabController;
   late Future<List<dynamic>> _stopsFuture;
   late Future<List<dynamic>> _historyFuture;
@@ -21,6 +22,7 @@ class _TripDetailsPageState extends State<TripDetailsPage>
   @override
   void initState() {
     super.initState();
+    _trip = Map<String, dynamic>.from(widget.trip);
     _tabController = TabController(length: 3, vsync: this);
     _stopsFuture = _loadStops();
     _historyFuture = _loadHistory();
@@ -45,27 +47,53 @@ class _TripDetailsPageState extends State<TripDetailsPage>
   }
 
   int? get _tripId {
-    final raw = widget.trip["trip_id"] ?? widget.trip["id"];
+    final raw = _trip["trip_id"] ?? _trip["tripId"] ?? _trip["id"];
     if (raw is int) return raw;
     return int.tryParse(raw?.toString() ?? "");
   }
 
   String _value(String key, {String fallback = "-"}) {
-    final v = widget.trip[key];
+    final v = _trip[key];
     if (v == null || v.toString().trim().isEmpty) return fallback;
     return v.toString();
   }
 
+  String _valueAny(List<String> keys, {String fallback = "-"}) {
+    for (final key in keys) {
+      final value = _value(key, fallback: "");
+      if (value.trim().isNotEmpty) return value;
+    }
+    return fallback;
+  }
+
+  void _applyTripUpdate(Map<String, dynamic> updated) {
+    setState(() {
+      _trip = {..._trip, ...updated};
+      _stopsFuture = _loadStops();
+      _historyFuture = _loadHistory();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    final tripId = _value("trip_id");
-    final routeName = _value("route_name", fallback: _value("route_code"));
-    final plate = _value("license_plate_no");
-    final driverName = _value("driver_name");
-    final tripDate = _formatDate(widget.trip["trip_date"]);
-    final departure = _formatDateTime(widget.trip["departure_time"]);
-    final arrival = _formatDateTime(widget.trip["arrival_time"]);
-    final status = _value("status", fallback: "scheduled");
+    final tripId = _valueAny(["trip_id", "tripId", "id"]);
+    final routeName =
+        _valueAny(["route_name", "routeName", "name"], fallback: _valueAny([
+      "route_code",
+      "route_no",
+      "routeCode",
+    ]));
+    final plate =
+        _valueAny(["license_plate_no", "license_plate", "plate_no"]);
+    final driverName =
+        _valueAny(["driver_name", "driverName", "full_name", "name"]);
+    final tripDate = _formatDate(_trip["trip_date"] ?? _trip["tripDate"]);
+    final departure =
+        _formatDateTime(_trip["departure_time"] ?? _trip["departureTime"]);
+    final arrival =
+        _formatDateTime(_trip["arrival_time"] ?? _trip["arrivalTime"]);
+    final status = _valueAny(["status"], fallback: "scheduled");
+    final statusLabel = _statusLabel(status);
 
     return Scaffold(
       appBar: AppBar(
@@ -113,7 +141,7 @@ class _TripDetailsPageState extends State<TripDetailsPage>
                         const SizedBox(height: 6),
                         _InfoRow(label: "Arrive", value: arrival),
                         const SizedBox(height: 6),
-                        _InfoRow(label: "Status", value: status),
+                        _InfoRow(label: "Status", value: statusLabel),
                       ],
                     ),
                   ),
@@ -121,14 +149,25 @@ class _TripDetailsPageState extends State<TripDetailsPage>
                 const SizedBox(height: 12),
                 ElevatedButton.icon(
                   onPressed: () async {
-                    final changed = await Navigator.push(
+                    final result = await Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => TripFormPage(trip: widget.trip),
+                        builder: (_) => TripFormPage(trip: _trip),
                       ),
                     );
-                    if (changed == true && mounted) {
-                      Navigator.pop(context, true);
+                    if (!mounted) return;
+                    if (result is Map<String, dynamic>) {
+                      _applyTripUpdate(result);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("Trip updated")),
+                      );
+                      return;
+                    }
+                    if (result == true) {
+                      setState(() {
+                        _stopsFuture = _loadStops();
+                        _historyFuture = _loadHistory();
+                      });
                     }
                   },
                   icon: const Icon(Icons.edit),
@@ -156,10 +195,19 @@ class _TripDetailsPageState extends State<TripDetailsPage>
                 separatorBuilder: (_, __) => const SizedBox(height: 12),
                 itemBuilder: (_, index) {
                   final stop = stops[index] as Map<String, dynamic>;
-                  final name = stop["stop_name"] ?? "Stop ${stop["stop_id"]}";
-                  final code = stop["stop_code"]?.toString();
-                  final order = stop["stop_order"]?.toString() ?? "-";
-                  final time = _formatDateTime(stop["scheduled_time"]);
+                  final stopId = stop["stop_id"] ?? stop["stopId"] ?? stop["id"];
+                  final name = stop["stop_name"] ??
+                      stop["stopName"] ??
+                      stop["name"] ??
+                      "Stop $stopId";
+                  final code = stop["stop_code"] ??
+                      stop["stopCode"] ??
+                      stop["code"];
+                  final order = stop["stop_order"] ??
+                      stop["stopOrder"] ??
+                      stop["order"];
+                  final time =
+                      _formatDateTime(stop["scheduled_time"] ?? stop["time"]);
                   final boarding = stop["is_boarding_allowed"] == true;
                   return Card(
                     child: Padding(
@@ -168,7 +216,7 @@ class _TripDetailsPageState extends State<TripDetailsPage>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            "$order. $name${code != null ? " ($code)" : ""}",
+                            "${order ?? "-"}${order == null ? "" : "."} $name${code != null ? " ($code)" : ""}",
                             style: Theme.of(context).textTheme.titleMedium,
                           ),
                           const SizedBox(height: 6),
@@ -201,10 +249,20 @@ class _TripDetailsPageState extends State<TripDetailsPage>
                 separatorBuilder: (_, __) => const SizedBox(height: 12),
                 itemBuilder: (_, index) {
                   final item = items[index] as Map<String, dynamic>;
-                  final lat = item["lat"]?.toString() ?? "-";
-                  final lng = item["lng"]?.toString() ?? "-";
-                  final speed = item["speed"]?.toString() ?? "-";
-                  final time = _formatDateTime(item["recorded_at"]);
+                  final lat =
+                      (item["lat"] ?? item["latitude"] ?? item["lat_deg"])
+                          ?.toString() ??
+                          "-";
+                  final lng =
+                      (item["lng"] ?? item["longitude"] ?? item["lng_deg"])
+                          ?.toString() ??
+                          "-";
+                  final speed = (item["speed"] ?? item["velocity"])
+                          ?.toString() ??
+                      "-";
+                  final time = _formatDateTime(
+                    item["recorded_at"] ?? item["recordedAt"] ?? item["time"],
+                  );
                   return Card(
                     child: Padding(
                       padding: const EdgeInsets.all(12),
@@ -288,4 +346,11 @@ String _formatDateTime(dynamic value) {
   final h = parsed.hour.toString().padLeft(2, "0");
   final min = parsed.minute.toString().padLeft(2, "0");
   return "$y-$m-$d $h:$min";
+}
+
+String _statusLabel(String value) {
+  final normalized = value.toLowerCase().trim();
+  if (normalized.contains("progress")) return "running";
+  if (normalized.contains("cancel")) return "cancelled";
+  return normalized.isEmpty ? "scheduled" : value;
 }

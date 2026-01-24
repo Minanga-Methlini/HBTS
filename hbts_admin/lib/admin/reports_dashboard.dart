@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'driver_status_report_page.dart';
-import 'full_details_report_page.dart';
+import 'report_card_page.dart';
 import '../theme/app_theme.dart';
 
 class ReportsDashboard extends StatelessWidget {
@@ -28,52 +27,22 @@ class ReportsDashboard extends StatelessWidget {
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.12),
+                    color: AppColors.success.withOpacity(0.18),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Icon(
-                    Icons.people,
-                    color: AppColors.primary,
+                    Icons.assignment_turned_in,
+                    color: AppColors.success,
                   ),
                 ),
-                title: const Text("Driver Status Report"),
-                subtitle: const Text("Approved / Pending / Rejected"),
+                title: const Text("Report Card"),
+                subtitle: const Text("Passengers + Trips summary"),
                 trailing: const Icon(Icons.arrow_forward),
                 onTap: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => const DriverStatusReportPage(),
-                    ),
-                  );
-                },
-              ),
-            ),
-            const SizedBox(height: 12),
-            Card(
-              child: ListTile(
-                leading: Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: AppColors.accent.withOpacity(0.18),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(
-                    Icons.list_alt,
-                    color: AppColors.accent,
-                  ),
-                ),
-                title: const Text("Full Details"),
-                subtitle: const Text(
-                  "Passengers, Drivers, Bus Owners (dummy data)",
-                ),
-                trailing: const Icon(Icons.arrow_forward),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const FullDetailsReportPage(),
+                      builder: (_) => const ReportCardPage(),
                     ),
                   );
                 },

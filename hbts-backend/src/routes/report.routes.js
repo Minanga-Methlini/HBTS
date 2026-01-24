@@ -1,5 +1,10 @@
 import express from "express";
-import { driverStatusReport } from "../controllers/report.controller.js";
+import {
+  driverStatusReport,
+  reportSummary,
+  reportSummaryPdf,
+  reportSummaryExcel,
+} from "../controllers/report.controller.js";
 import { requireAuth } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
@@ -17,6 +22,27 @@ router.get(
   requireAuth,
   requireAdmin,
   driverStatusReport
+);
+
+router.get(
+  "/summary",
+  requireAuth,
+  requireAdmin,
+  reportSummary
+);
+
+router.get(
+  "/summary/pdf",
+  requireAuth,
+  requireAdmin,
+  reportSummaryPdf
+);
+
+router.get(
+  "/summary/excel",
+  requireAuth,
+  requireAdmin,
+  reportSummaryExcel
 );
 
 export default router;

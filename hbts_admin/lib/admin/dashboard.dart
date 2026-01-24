@@ -7,6 +7,7 @@ import 'reports_dashboard.dart';
 import 'buses_page.dart';
 import 'routes_page.dart';
 import 'trips_page.dart';
+import 'report_card_page.dart';
 import '../services/admin_api.dart';
 import '../services/driver_admin_api.dart';
 import '../theme/app_theme.dart';
@@ -230,25 +231,27 @@ class _AdminDashboardState extends State<AdminDashboard> {
       final label = (status == null || status.isEmpty) ? "scheduled" : status;
       counts[label] = (counts[label] ?? 0) + 1;
     }
-
-    final sorted = counts.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
-
-    const colors = [
-      AppColors.warning,
-      AppColors.accent,
-      AppColors.success,
-      AppColors.danger,
-      AppColors.primary,
-    ];
-
     return [
-      for (var i = 0; i < sorted.length; i++)
-        _ChartSlice(
-          label: sorted[i].key,
-          value: sorted[i].value,
-          color: colors[i % colors.length],
-        ),
+      _ChartSlice(
+        label: "scheduled",
+        value: counts["scheduled"] ?? 0,
+        color: AppColors.warning,
+      ),
+      _ChartSlice(
+        label: "running",
+        value: counts["in_progress"] ?? 0,
+        color: AppColors.accent,
+      ),
+      _ChartSlice(
+        label: "completed",
+        value: counts["completed"] ?? 0,
+        color: AppColors.success,
+      ),
+      _ChartSlice(
+        label: "cancelled",
+        value: counts["cancelled"] ?? 0,
+        color: AppColors.danger,
+      ),
     ];
   }
 
@@ -434,7 +437,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
               items: items,
               onReportTap: () => Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const ReportsDashboard()),
+                MaterialPageRoute(builder: (_) => ReportCardPage()),
               ),
             ),
           ],
@@ -640,24 +643,36 @@ class _SnapshotGrid extends StatelessWidget {
       ...groups.map(
         (group) => _SnapshotCard(
           title: group.title,
-          subtitle: "Active / Pending / Rejected",
-          slices: [
-            _ChartSlice(
-              label: "Active",
-              value: group.active,
-              color: AppColors.success,
-            ),
-            _ChartSlice(
-              label: "Pending",
-              value: group.pending,
-              color: AppColors.warning,
-            ),
-            _ChartSlice(
-              label: "Rejected",
-              value: group.rejected,
-              color: AppColors.danger,
-            ),
-          ],
+          subtitle: group.title == "Passengers"
+              ? "Total passengers"
+              : "Active / Pending / Rejected",
+          totalLabel: group.title == "Passengers" ? "Total" : null,
+          totalValue: group.title == "Passengers" ? group.total : null,
+          slices: group.title == "Passengers"
+              ? [
+                  _ChartSlice(
+                    label: "Passengers",
+                    value: group.total,
+                    color: AppColors.primary,
+                  ),
+                ]
+              : [
+                  _ChartSlice(
+                    label: "Active",
+                    value: group.active,
+                    color: AppColors.success,
+                  ),
+                  _ChartSlice(
+                    label: "Pending",
+                    value: group.pending,
+                    color: AppColors.warning,
+                  ),
+                  _ChartSlice(
+                    label: "Rejected",
+                    value: group.rejected,
+                    color: AppColors.danger,
+                  ),
+                ],
           onTap: () => Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => group.page),
@@ -678,13 +693,33 @@ class _SnapshotGrid extends StatelessWidget {
       _ReportCard(onTap: onReportTap),
     ];
 
-    return GridView.count(
-      crossAxisCount: 4,
-      crossAxisSpacing: 12,
-      mainAxisSpacing: 12,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      children: cards,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final crossAxisCount = width >= 1200
+            ? 4
+            : width >= 900
+                ? 3
+                : width >= 600
+                    ? 2
+                    : 1;
+        final spacing = 12.0;
+        final totalSpacing = spacing * (crossAxisCount - 1);
+        final cardWidth = (width - totalSpacing) / crossAxisCount;
+
+        return Wrap(
+          alignment: WrapAlignment.center,
+          spacing: spacing,
+          runSpacing: spacing,
+          children: [
+            for (final card in cards)
+              SizedBox(
+                width: cardWidth,
+                child: card,
+              ),
+          ],
+        );
+      },
     );
   }
 }
@@ -694,12 +729,16 @@ class _SnapshotCard extends StatelessWidget {
   final String subtitle;
   final List<_ChartSlice> slices;
   final VoidCallback onTap;
+  final String? totalLabel;
+  final int? totalValue;
 
   const _SnapshotCard({
     required this.title,
     required this.subtitle,
     required this.slices,
     required this.onTap,
+    this.totalLabel,
+    this.totalValue,
   });
 
   @override
@@ -734,6 +773,15 @@ class _SnapshotCard extends StatelessWidget {
                     ?.copyWith(color: AppColors.textMuted),
               ),
               const SizedBox(height: 8),
+              if (totalLabel != null && totalValue != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: _LegendRow(
+                    color: AppColors.primary,
+                    label: totalLabel!,
+                    value: totalValue!,
+                  ),
+                ),
               ...slices.map(
                 (slice) => Padding(
                   padding: const EdgeInsets.only(bottom: 4),
@@ -805,6 +853,7 @@ class _ReportCard extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
@@ -832,7 +881,7 @@ class _ReportCard extends StatelessWidget {
                     .bodySmall
                     ?.copyWith(color: AppColors.textMuted),
               ),
-              const Spacer(),
+              const SizedBox(height: 12),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(

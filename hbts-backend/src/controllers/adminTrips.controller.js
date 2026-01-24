@@ -164,6 +164,9 @@ export const listTrips = async (req, res) => {
 export const listDeletedTrips = async (req, res) => {
   try {
     const columns = await getColumns("trips");
+    const driverColumns = await getColumns("drivers");
+    const routeColumns = await getColumns("routes");
+    const busColumns = await getColumns("buses");
     if (!columns.includes("deleted_at") && !columns.includes("is_deleted")) {
       return res.json([]);
     }
@@ -175,10 +178,53 @@ export const listDeletedTrips = async (req, res) => {
       where.push("t.is_deleted = true");
     }
 
+    const driverNameCol = pickColumn(driverColumns, [
+      "name",
+      "full_name",
+      "driver_name",
+      "fullName",
+      "driverName",
+    ]);
+    const routeNameCol = pickColumn(routeColumns, [
+      "route_name",
+      "name",
+      "routeName",
+    ]);
+    const routeCodeCol = pickColumn(routeColumns, [
+      "route_no",
+      "route_code",
+      "route_number",
+      "code",
+    ]);
+    const busPlateCol = pickColumn(busColumns, [
+      "license_plate_no",
+      "license_plate",
+    ]);
+
+    const selectExtras = [
+      driverNameCol
+        ? `d."${driverNameCol}" AS driver_name`
+        : "NULL AS driver_name",
+      routeNameCol
+        ? `r."${routeNameCol}" AS route_name`
+        : "NULL AS route_name",
+      routeCodeCol
+        ? `r."${routeCodeCol}" AS route_code`
+        : "NULL AS route_code",
+      busPlateCol
+        ? `b."${busPlateCol}" AS license_plate_no`
+        : "NULL AS license_plate_no",
+      "c.name AS operator_name",
+    ];
+
     const result = await pool.query(
       `
-      SELECT t.*
+      SELECT t.*, ${selectExtras.join(", ")}
       FROM trips t
+      LEFT JOIN routes r ON r.route_id = t.route_id
+      LEFT JOIN buses b ON b.bus_id = t.bus_id
+      LEFT JOIN drivers d ON d.driver_id = t.driver_id
+      LEFT JOIN company c ON c.operator_id = t.operator_id
       WHERE ${where.join(" AND ")}
       ORDER BY t.${getOrderColumn(columns)} DESC
       `

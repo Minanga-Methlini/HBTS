@@ -148,10 +148,14 @@ class _TripFormPageState extends State<TripFormPage> {
     setState(() => _saving = true);
     try {
       await AdminApi.updateTrip(tripId, _buildPayload());
+      final refreshed = await AdminApi.getTrips(tripId: tripId);
+      final updated = refreshed.isNotEmpty
+          ? Map<String, dynamic>.from(refreshed.first as Map)
+          : <String, dynamic>{};
       if (!mounted) return;
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text("Trip updated")));
-      Navigator.pop(context, true);
+      Navigator.pop(context, _mergeTripUpdate(updated));
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
@@ -223,6 +227,65 @@ class _TripFormPageState extends State<TripFormPage> {
     return "$name (ID $id)";
   }
 
+  Map<String, dynamic> _mergeTripUpdate(Map<String, dynamic> updated) {
+    final merged = <String, dynamic>{};
+    if (widget.trip != null) {
+      merged.addAll(widget.trip!);
+    }
+    merged.addAll(updated);
+
+    if (_selectedRouteId != null) {
+      merged["route_id"] = _selectedRouteId;
+    }
+    if (_selectedBusId != null) {
+      merged["bus_id"] = _selectedBusId;
+    }
+    if (_selectedDriverId != null) {
+      merged["driver_id"] = _selectedDriverId;
+    }
+    if (_selectedStatus.isNotEmpty) {
+      merged["status"] = _selectedStatus;
+    }
+    if (_tripDateCtrl.text.trim().isNotEmpty) {
+      merged["trip_date"] = _tripDateCtrl.text.trim();
+    }
+    if (_departureCtrl.text.trim().isNotEmpty) {
+      merged["departure_time"] = _departureCtrl.text.trim();
+    }
+    if (_arrivalCtrl.text.trim().isNotEmpty) {
+      merged["arrival_time"] = _arrivalCtrl.text.trim();
+    }
+
+    final route = _routes.firstWhere(
+      (r) => _parseInt(r["route_id"]) == _selectedRouteId,
+      orElse: () => {},
+    );
+    if (route.isNotEmpty) {
+      merged["route_name"] = route["route_name"] ?? route["name"];
+      merged["route_code"] = route["route_no"] ?? route["route_code"];
+    }
+
+    final bus = _buses.firstWhere(
+      (b) => _parseInt(b["bus_id"]) == _selectedBusId,
+      orElse: () => {},
+    );
+    if (bus.isNotEmpty) {
+      merged["license_plate_no"] =
+          bus["license_plate_no"] ?? bus["license_plate"];
+    }
+
+    final driver = _drivers.firstWhere(
+      (d) => _parseInt(d["driver_id"] ?? d["id"]) == _selectedDriverId,
+      orElse: () => {},
+    );
+    if (driver.isNotEmpty) {
+      merged["driver_name"] =
+          driver["name"] ?? driver["full_name"] ?? driver["driver_name"];
+    }
+
+    return merged;
+  }
+
   void _autoFillOperatorFromBus(int? busId) {
     if (busId == null) return;
     final bus =
@@ -233,6 +296,70 @@ class _TripFormPageState extends State<TripFormPage> {
     }
   }
 
+  DateTime _defaultInitialDate() {
+    final now = DateTime.now();
+    return DateTime(now.year, now.month, now.day);
+  }
+
+  DateTime? _parseDate(String raw) {
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty) return null;
+    return DateTime.tryParse(trimmed);
+  }
+
+  String _formatDateValue(DateTime value) {
+    final y = value.year.toString().padLeft(4, "0");
+    final m = value.month.toString().padLeft(2, "0");
+    final d = value.day.toString().padLeft(2, "0");
+    return "$y-$m-$d";
+  }
+
+  String _formatDateTimeValue(DateTime value) {
+    final y = value.year.toString().padLeft(4, "0");
+    final m = value.month.toString().padLeft(2, "0");
+    final d = value.day.toString().padLeft(2, "0");
+    final h = value.hour.toString().padLeft(2, "0");
+    final min = value.minute.toString().padLeft(2, "0");
+    return "$y-$m-$d $h:$min:00";
+  }
+
+  Future<void> _pickDate(TextEditingController controller) async {
+    final initial = _parseDate(controller.text) ?? _defaultInitialDate();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: DateTime(2000, 1, 1),
+      lastDate: DateTime(2100, 12, 31),
+    );
+    if (picked == null) return;
+    controller.text = _formatDateValue(picked);
+  }
+
+  Future<void> _pickDateTime(TextEditingController controller) async {
+    final now = DateTime.now();
+    final initial = _parseDate(controller.text) ?? now;
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: DateTime(2000, 1, 1),
+      lastDate: DateTime(2100, 12, 31),
+    );
+    if (pickedDate == null) return;
+    final pickedTime = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(initial),
+    );
+    if (pickedTime == null) return;
+    final combined = DateTime(
+      pickedDate.year,
+      pickedDate.month,
+      pickedDate.day,
+      pickedTime.hour,
+      pickedTime.minute,
+    );
+    controller.text = _formatDateTimeValue(combined);
+  }
+
   Widget _textField({
     required String label,
     required TextEditingController controller,
@@ -240,13 +367,20 @@ class _TripFormPageState extends State<TripFormPage> {
     String? Function(String?)? validator,
     String? hint,
     bool readOnly = false,
+    VoidCallback? onTap,
+    IconData? suffixIcon,
   }) {
     return TextFormField(
       controller: controller,
       keyboardType: keyboardType,
       validator: validator,
       readOnly: readOnly,
-      decoration: InputDecoration(labelText: label, hintText: hint),
+      onTap: onTap,
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        suffixIcon: suffixIcon == null ? null : Icon(suffixIcon),
+      ),
     );
   }
 
@@ -350,6 +484,9 @@ class _TripFormPageState extends State<TripFormPage> {
                         label: "Trip Date",
                         controller: _tripDateCtrl,
                         hint: "YYYY-MM-DD",
+                        readOnly: true,
+                        onTap: () => _pickDate(_tripDateCtrl),
+                        suffixIcon: Icons.calendar_today,
                         validator: (value) {
                           if ((value ?? "").trim().isEmpty) {
                             return "Trip date is required";
@@ -362,6 +499,9 @@ class _TripFormPageState extends State<TripFormPage> {
                         label: "Departure Time",
                         controller: _departureCtrl,
                         hint: "YYYY-MM-DD HH:MM:SS",
+                        readOnly: true,
+                        onTap: () => _pickDateTime(_departureCtrl),
+                        suffixIcon: Icons.schedule,
                         validator: (value) {
                           if ((value ?? "").trim().isEmpty) {
                             return "Departure time is required";
@@ -374,6 +514,9 @@ class _TripFormPageState extends State<TripFormPage> {
                         label: "Arrival Time",
                         controller: _arrivalCtrl,
                         hint: "YYYY-MM-DD HH:MM:SS",
+                        readOnly: true,
+                        onTap: () => _pickDateTime(_arrivalCtrl),
+                        suffixIcon: Icons.schedule,
                         validator: (value) {
                           if ((value ?? "").trim().isEmpty) {
                             return "Arrival time is required";
