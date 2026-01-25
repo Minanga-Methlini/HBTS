@@ -28,6 +28,9 @@ import { attachTripSocket } from "./ws/trip.socket.js";
 import trackingRoutes from "./routes/tracking.routes.js";
 import driverTrackingRoutes from "./routes/driverTracking.routes.js";
 
+import { initNotificationWS } from "./ws/notification.ws.js";
+import { initTrackingWS } from "./ws/tracking.ws.js";
+
 
 import { initNotificationWS } from "./ws/notification.ws.js";
 
@@ -85,18 +88,45 @@ server.listen(PORT, () => {
 async function start() {
   await initRedis();
 
-  const server = http.createServer(app);
-  attachTripSocket(server);
+// ✅ Attach WebSocket server on a dedicated path
+// ✅ WS servers (manual upgrade routing)
+export const notificationWss = new WebSocketServer({ noServer: true });
+export const trackingWss = new WebSocketServer({ noServer: true });
 
-  server.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
-  });
+// ✅ Attach handlers
+initNotificationWS(notificationWss);
+initTrackingWS(trackingWss);
 
-  console.log("BOOT: starting expirePendingBookings job");
-  startExpirePendingBookingsJob();
-}
+// ✅ Route upgrades by path
+server.on("upgrade", (req, socket, head) => {
+  try {
+    const url = new URL(req.url, "http://localhost");
+    const pathname = url.pathname;
 
-start().catch((err) => {
-  console.error("BOOT FAILED:", err);
-  process.exit(1);
+    if (pathname === "/ws/notifications") {
+      notificationWss.handleUpgrade(req, socket, head, (ws) => {
+        notificationWss.emit("connection", ws, req);
+      });
+      return;
+    }
+
+    if (pathname === "/ws/tracking") {
+      trackingWss.handleUpgrade(req, socket, head, (ws) => {
+        trackingWss.emit("connection", ws, req);
+      });
+      return;
+    }
+
+    socket.destroy();
+  } catch (e) {
+    socket.destroy();
+  }
 });
+
+
+server.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+});
+
+console.log("BOOT: starting expirePendingBookings job");
+startExpirePendingBookingsJob();
