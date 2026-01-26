@@ -11,13 +11,6 @@ import { requireTempToken } from "../middleware/tempAuth.js";
 import { requireAuth } from "../middleware/auth.middleware.js";
 import { getMe } from "../controllers/me.controller.js";
 
-import {
-  login,
-  verifyLoginOtp,
-} from "../controllers/auth.controller.js";
-
-
-
 const router = Router();
 
 // NEW unified login
@@ -48,10 +41,4 @@ router.post("/admin/login/verify-otp",
 );
 router.get("/me", requireAuth, getMe);
  
-<<<<<<< HEAD
 export default router;
-=======
-
-export default router;
-
->>>>>>> 13f791f (Add tracking, live location, and token updates)
