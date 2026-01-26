@@ -20,6 +20,7 @@ class AdminDashboard extends StatefulWidget {
 }
 
 class _AdminDashboardState extends State<AdminDashboard> {
+  final _scaffoldKey = GlobalKey<ScaffoldState>();
   bool _loading = true;
   String? _error;
   int _passengerActive = 0;
@@ -31,8 +32,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
   int _ownerActive = 0;
   int _ownerInactive = 0;
   int _ownerSuspended = 0;
+  int _busTotal = 0;
+  int _routeTotal = 0;
+  int _tripTotal = 0;
   List<_ChartSlice> _busSlices = const [];
-  List<_ChartSlice> _routeSlices = const [];
   List<_ChartSlice> _tripSlices = const [];
 
   @override
@@ -77,7 +80,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
       final passengerCounts = _countPassengerStatuses(passengers);
       final busSlices = _buildBusSlices(buses);
-      final routeSlices = _buildRouteSlices(routes);
       final tripSlices = _buildTripSlices(trips);
       final ownerCounts = _countOwnerStatuses(busOwners);
 
@@ -92,8 +94,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
         _ownerActive = ownerCounts.active;
         _ownerInactive = ownerCounts.inactive;
         _ownerSuspended = ownerCounts.suspended;
+        _busTotal = buses.length;
+        _routeTotal = routes.length;
+        _tripTotal = trips.length;
         _busSlices = busSlices;
-        _routeSlices = routeSlices;
         _tripSlices = tripSlices;
         _loading = false;
         _error = null;
@@ -181,48 +185,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
     ];
   }
 
-  List<_ChartSlice> _buildRouteSlices(List<dynamic> routes) {
-    final counts = <String, int>{};
-    for (final item in routes) {
-      if (item is! Map<String, dynamic>) continue;
-      final label =
-          item["route_name"]?.toString().trim().isNotEmpty == true
-              ? item["route_name"].toString().trim()
-              : item["name"]?.toString().trim().isNotEmpty == true
-                  ? item["name"].toString().trim()
-                  : item["route_no"]?.toString().trim().isNotEmpty == true
-                      ? item["route_no"].toString().trim()
-                      : item["route_code"]?.toString().trim().isNotEmpty == true
-                          ? item["route_code"].toString().trim()
-                          : item["route_number"]?.toString().trim().isNotEmpty ==
-                                  true
-                              ? item["route_number"].toString().trim()
-                              : "Route";
-      counts[label] = (counts[label] ?? 0) + 1;
-    }
-
-    final sorted = counts.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
-
-    const colors = [
-      AppColors.accent,
-      AppColors.primary,
-      AppColors.primarySoft,
-      AppColors.success,
-      AppColors.warning,
-      AppColors.danger,
-    ];
-
-    return [
-      for (var i = 0; i < sorted.length; i++)
-        _ChartSlice(
-          label: sorted[i].key,
-          value: sorted[i].value,
-          color: colors[i % colors.length],
-        ),
-    ];
-  }
-
   List<_ChartSlice> _buildTripSlices(List<dynamic> trips) {
     final counts = <String, int>{};
     for (final item in trips) {
@@ -282,162 +244,417 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    final groups = [
-      _StatusGroup(
+    final totalPassengers =
+        _passengerActive + _passengerPending + _passengerRejected;
+    final totalDrivers = _driverActive + _driverPending + _driverRejected;
+    final totalOwners = _ownerActive + _ownerInactive + _ownerSuspended;
+    final runningTrips = _sliceValue(_tripSlices, "running");
+    final completedTrips = _sliceValue(_tripSlices, "completed");
+    final revenueSlices = _busSlices.isNotEmpty
+        ? _busSlices
+        : [
+            const _ChartSlice(
+              label: "City",
+              value: 42,
+              color: AppColors.danger,
+            ),
+            const _ChartSlice(
+              label: "Express",
+              value: 31,
+              color: AppColors.primary,
+            ),
+            const _ChartSlice(
+              label: "Intercity",
+              value: 27,
+              color: AppColors.accent,
+            ),
+          ];
+    final statCards = [
+      _StatCardData(
         title: "Passengers",
-        active: _passengerActive,
-        pending: _passengerPending,
-        rejected: _passengerRejected,
-        page: const CustomersPage(),
+        value: _formatNumber(totalPassengers),
+        subtitle: "Active: ${_formatNumber(_passengerActive)}",
+        footer:
+            "Pending: ${_formatNumber(_passengerPending)} · Rejected: ${_formatNumber(_passengerRejected)}",
+        color: const Color(0xFFF59E0B),
+        icon: Icons.people_outline,
       ),
-      _StatusGroup(
+      _StatCardData(
         title: "Drivers",
-        active: _driverActive,
-        pending: _driverPending,
-        rejected: _driverRejected,
-        page: const DriversDashboard(),
+        value: _formatNumber(totalDrivers),
+        subtitle: "Approved: ${_formatNumber(_driverActive)}",
+        footer:
+            "Pending: ${_formatNumber(_driverPending)} · Rejected: ${_formatNumber(_driverRejected)}",
+        color: const Color(0xFFF43F5E),
+        icon: Icons.badge_outlined,
       ),
-      _StatusGroup(
+      _StatCardData(
         title: "Bus Owners",
-        active: _ownerActive,
-        pending: _ownerInactive,
-        rejected: _ownerSuspended,
-        page: const OperatorsDashboard(),
+        value: _formatNumber(totalOwners),
+        subtitle: "Active: ${_formatNumber(_ownerActive)}",
+        footer:
+            "Inactive: ${_formatNumber(_ownerInactive)} · Suspended: ${_formatNumber(_ownerSuspended)}",
+        color: const Color(0xFF10B981),
+        icon: Icons.business_center_outlined,
+      ),
+      _StatCardData(
+        title: "Buses",
+        value: _formatNumber(_busTotal),
+        subtitle: "Routes: ${_formatNumber(_routeTotal)}",
+        footer: "Trips: ${_formatNumber(_tripTotal)}",
+        color: AppColors.primary,
+        icon: Icons.directions_bus_outlined,
       ),
     ];
-    final items = [
-      _DashboardItem(
-        title: "Buses",
-        subtitle: "Availability overview",
-        icon: Icons.directions_bus_rounded,
-        page: const BusesPage(),
-        slices: _busSlices.isEmpty
-            ? const [
-                _ChartSlice(
-                  label: "No data",
-                  value: 0,
-                  color: AppColors.outline,
-                ),
-              ]
-            : _busSlices,
+    final trafficSources = [
+      _TrafficSourceData(
+        label: "Passengers Active",
+        value: _ratio(_passengerActive, totalPassengers),
       ),
-      _DashboardItem(
-        title: "Routes",
-        subtitle: "Network overview",
-        icon: Icons.alt_route_rounded,
-        page: const RoutesPage(),
-        slices: _routeSlices.isEmpty
-            ? const [
-                _ChartSlice(
-                  label: "No data",
-                  value: 0,
-                  color: AppColors.outline,
-                ),
-              ]
-            : _routeSlices,
+      _TrafficSourceData(
+        label: "Passengers Pending",
+        value: _ratio(_passengerPending, totalPassengers),
       ),
-      _DashboardItem(
-        title: "Trips",
-        subtitle: "Daily trip stats",
-        icon: Icons.route_rounded,
-        page: const TripsPage(),
-        slices: _tripSlices.isEmpty
-            ? const [
-                _ChartSlice(
-                  label: "No data",
-                  value: 0,
-                  color: AppColors.outline,
-                ),
-              ]
-            : _tripSlices,
+      _TrafficSourceData(
+        label: "Drivers Approved",
+        value: _ratio(_driverActive, totalDrivers),
+      ),
+      _TrafficSourceData(
+        label: "Trips Running",
+        value: _ratio(runningTrips, _tripTotal),
+      ),
+      _TrafficSourceData(
+        label: "Trips Completed",
+        value: _ratio(completedTrips, _tripTotal),
+      ),
+    ];
+    final navItems = [
+      _NavItem(
+        label: "Dashboard",
+        icon: Icons.home_outlined,
+        pageBuilder: (_) => const AdminDashboard(),
+      ),
+      _NavItem(
+        label: "Passengers",
+        icon: Icons.people_outline,
+        pageBuilder: (_) => const CustomersPage(),
+      ),
+      _NavItem(
+        label: "Drivers",
+        icon: Icons.badge_outlined,
+        pageBuilder: (_) => const DriversDashboard(),
+      ),
+      _NavItem(
+        label: "Bus Owners",
+        icon: Icons.business_center_outlined,
+        pageBuilder: (_) => const OperatorsDashboard(),
+      ),
+      _NavItem(
+        label: "Buses",
+        icon: Icons.directions_bus_outlined,
+        pageBuilder: (_) => const BusesPage(),
+      ),
+      _NavItem(
+        label: "Routes",
+        icon: Icons.alt_route_outlined,
+        pageBuilder: (_) => const RoutesPage(),
+      ),
+      _NavItem(
+        label: "Trips",
+        icon: Icons.route_outlined,
+        pageBuilder: (_) => const TripsPage(),
+      ),
+      _NavItem(
+        label: "Reports",
+        icon: Icons.insights_outlined,
+        pageBuilder: (_) => const ReportsDashboard(),
+      ),
+      _NavItem(
+        label: "Report Cards",
+        icon: Icons.picture_as_pdf_outlined,
+        pageBuilder: (_) => ReportCardPage(),
       ),
     ];
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('HBTS+ Admin')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: AppGradients.background,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primary.withOpacity(0.2),
-                    blurRadius: 20,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 56,
-                    height: 56,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: const Icon(
-                      Icons.admin_panel_settings,
-                      color: Colors.white,
-                      size: 30,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          "Operations Overview",
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleLarge
-                              ?.copyWith(color: Colors.white),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          "Manage passengers, drivers, and compliance reports.",
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodyMedium
-                              ?.copyWith(color: Colors.white70),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              "Status Snapshot",
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 12),
-            if (_loading) const LinearProgressIndicator(),
-            if (_error != null && !_loading)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Text(
-                  _error!,
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodySmall
-                      ?.copyWith(color: AppColors.danger),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isWide = constraints.maxWidth >= 1100;
+        final sidebar = _Sidebar(
+          activeIndex: 0,
+          onTap: (index) {
+            final pageBuilder = navItems[index].pageBuilder;
+            if (pageBuilder == null) return;
+            if (index == 0) return;
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: pageBuilder),
+            );
+          },
+          navItems: navItems,
+        );
+        return Scaffold(
+          key: _scaffoldKey,
+          appBar: _DashboardAppBar(
+            showMenu: !isWide,
+            onMenuTap: () => _scaffoldKey.currentState?.openDrawer(),
+          ),
+          drawer: isWide ? null : Drawer(child: sidebar),
+          body: Row(
+            children: [
+              if (isWide) sidebar,
+              Expanded(
+                child: _DashboardBody(
+                  loading: _loading,
+                  error: _error,
+                  statCards: statCards,
+                  revenueSlices: revenueSlices,
+                  trafficSources: trafficSources,
+                  totalTrips: _tripTotal,
+                  runningTrips: runningTrips,
                 ),
               ),
-            _SnapshotGrid(
-              groups: groups,
-              items: items,
-              onReportTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => ReportCardPage()),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+}
+
+String _formatNumber(int value) {
+  final digits = value.toString();
+  final buffer = StringBuffer();
+  for (var i = 0; i < digits.length; i++) {
+    final index = digits.length - i;
+    buffer.write(digits[i]);
+    if (index > 1 && index % 3 == 1) {
+      buffer.write(',');
+    }
+  }
+  return buffer.toString();
+}
+
+int _sliceValue(List<_ChartSlice> slices, String label) {
+  for (final slice in slices) {
+    if (slice.label == label) return slice.value;
+  }
+  return 0;
+}
+
+double _ratio(int value, int total) {
+  if (total <= 0) return 0;
+  return value / total;
+}
+
+class _NavItem {
+  final String label;
+  final IconData icon;
+  final WidgetBuilder? pageBuilder;
+
+  const _NavItem({
+    required this.label,
+    required this.icon,
+    this.pageBuilder,
+  });
+}
+
+class _DashboardAppBar extends StatelessWidget implements PreferredSizeWidget {
+  final bool showMenu;
+  final VoidCallback onMenuTap;
+
+  const _DashboardAppBar({
+    required this.showMenu,
+    required this.onMenuTap,
+  });
+
+  @override
+  Size get preferredSize => const Size.fromHeight(64);
+
+  @override
+  Widget build(BuildContext context) {
+    return AppBar(
+      titleSpacing: 12,
+      automaticallyImplyLeading: false,
+      title: Row(
+        children: [
+          if (showMenu)
+            IconButton(
+              onPressed: onMenuTap,
+              icon: const Icon(Icons.menu_rounded),
+            ),
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.directions_bus_filled,
+              color: AppColors.primary,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 10),
+          const Text("HBTS+ Admin"),
+        ],
+      ),
+      actions: [
+        if (MediaQuery.of(context).size.width >= 900)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Container(
+              width: 260,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: TextField(
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  hintText: "Search...",
+                  hintStyle: const TextStyle(color: Color(0xFFDAE2FF)),
+                  prefixIcon: const Icon(Icons.search, color: Colors.white),
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                ),
+              ),
+            ),
+          ),
+        IconButton(
+          onPressed: () {},
+          icon: const Icon(Icons.notifications_none_outlined),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(right: 12),
+          child: CircleAvatar(
+            radius: 16,
+            backgroundColor: Colors.white.withOpacity(0.2),
+            child: const Icon(Icons.person_outline, color: Colors.white),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _Sidebar extends StatelessWidget {
+  final int activeIndex;
+  final ValueChanged<int> onTap;
+  final List<_NavItem> navItems;
+
+  const _Sidebar({
+    required this.activeIndex,
+    required this.onTap,
+    required this.navItems,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 240,
+      color: Colors.white,
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "HBTS",
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: AppColors.textMuted,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 1.2,
+                    ),
+              ),
+              const SizedBox(height: 12),
+              ...List.generate(
+                navItems.length,
+                (index) => _SidebarItem(
+                  label: navItems[index].label,
+                  icon: navItems[index].icon,
+                  selected: index == activeIndex,
+                  onTap: () => onTap(index),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                "SUPPORT",
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: AppColors.textMuted,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 1.2,
+                    ),
+              ),
+              const SizedBox(height: 12),
+              _SidebarItem(
+                label: "Documentation",
+                icon: Icons.help_outline,
+                selected: false,
+                onTap: () {},
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: const [
+                    Icon(Icons.support_agent, color: AppColors.primary),
+                    SizedBox(width: 8),
+                    Expanded(child: Text("Need help?")),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SidebarItem extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _SidebarItem({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = selected ? AppColors.primary : AppColors.textMuted;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        decoration: BoxDecoration(
+          color: selected ? const Color(0xFFE8EDFF) : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: color, size: 18),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                label,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: color,
+                      fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                    ),
               ),
             ),
           ],
@@ -445,24 +662,636 @@ class _AdminDashboardState extends State<AdminDashboard> {
       ),
     );
   }
-
 }
 
-class _ReportAction extends StatelessWidget {
-  final VoidCallback onPressed;
+class _DashboardBody extends StatelessWidget {
+  final bool loading;
+  final String? error;
+  final List<_StatCardData> statCards;
+  final List<_ChartSlice> revenueSlices;
+  final List<_TrafficSourceData> trafficSources;
+  final int totalTrips;
+  final int runningTrips;
 
-  const _ReportAction({required this.onPressed});
+  const _DashboardBody({
+    required this.loading,
+    required this.error,
+    required this.statCards,
+    required this.revenueSlices,
+    required this.trafficSources,
+    required this.totalTrips,
+    required this.runningTrips,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton.icon(
-        onPressed: onPressed,
-        icon: const Icon(Icons.insights_rounded),
-        label: const Text("Open Reports"),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primaryDark,
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "HBTS Admin Dashboard",
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            "Operational overview across passengers, drivers, buses, and trips",
+            style: Theme.of(context)
+                .textTheme
+                .bodySmall
+                ?.copyWith(color: AppColors.textMuted),
+          ),
+          const SizedBox(height: 20),
+          if (loading) const LinearProgressIndicator(),
+          if (error != null && !loading)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Text(
+                error!,
+                style: Theme.of(context)
+                    .textTheme
+                    .bodySmall
+                    ?.copyWith(color: AppColors.danger),
+              ),
+            ),
+          _StatCardGrid(cards: statCards),
+          const SizedBox(height: 16),
+          _AnalyticsGrid(
+            revenueSlices: revenueSlices,
+            trafficSources: trafficSources,
+            totalTrips: totalTrips,
+            runningTrips: runningTrips,
+          ),
+          const SizedBox(height: 16),
+          _MiniStatsRow(),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatCardData {
+  final String title;
+  final String value;
+  final String subtitle;
+  final String footer;
+  final Color color;
+  final IconData icon;
+
+  const _StatCardData({
+    required this.title,
+    required this.value,
+    required this.subtitle,
+    required this.footer,
+    required this.color,
+    required this.icon,
+  });
+}
+
+class _StatCardGrid extends StatelessWidget {
+  final List<_StatCardData> cards;
+
+  const _StatCardGrid({required this.cards});
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final crossAxisCount = width >= 1200
+            ? 4
+            : width >= 900
+                ? 2
+                : 1;
+        final spacing = 12.0;
+        final totalSpacing = spacing * (crossAxisCount - 1);
+        final cardWidth = (width - totalSpacing) / crossAxisCount;
+
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: [
+            for (final card in cards)
+              SizedBox(
+                width: cardWidth,
+                child: _StatCard(data: card),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _StatCard extends StatelessWidget {
+  final _StatCardData data;
+
+  const _StatCard({required this.data});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        data.value,
+                        style:
+                            Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                  color: data.color,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        data.title,
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        data.subtitle,
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodySmall
+                            ?.copyWith(color: AppColors.textMuted),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: data.color.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(data.icon, color: data.color),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              color: data.color,
+              borderRadius: const BorderRadius.vertical(
+                bottom: Radius.circular(16),
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  data.footer,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+                const Icon(Icons.trending_up, color: Colors.white, size: 18),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AnalyticsGrid extends StatelessWidget {
+  final List<_ChartSlice> revenueSlices;
+  final List<_TrafficSourceData> trafficSources;
+  final int totalTrips;
+  final int runningTrips;
+
+  const _AnalyticsGrid({
+    required this.revenueSlices,
+    required this.trafficSources,
+    required this.totalTrips,
+    required this.runningTrips,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final isWide = width >= 1200;
+        final spacing = 12.0;
+        final cardWidth = isWide ? (width - spacing * 2) / 3 : width;
+
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: [
+            SizedBox(
+              width: cardWidth,
+              child: _SalesCard(
+                totalTrips: totalTrips,
+                runningTrips: runningTrips,
+              ),
+            ),
+            SizedBox(
+              width: cardWidth,
+              child: _RevenueCard(slices: revenueSlices),
+            ),
+            SizedBox(
+              width: cardWidth,
+              child: _TrafficSourcesCard(sources: trafficSources),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _SalesCard extends StatelessWidget {
+  final int totalTrips;
+  final int runningTrips;
+
+  const _SalesCard({
+    required this.totalTrips,
+    required this.runningTrips,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: const BoxDecoration(
+              color: AppColors.primary,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      "Trips Per Day",
+                      style:
+                          Theme.of(context).textTheme.titleSmall?.copyWith(
+                                color: Colors.white,
+                              ),
+                    ),
+                    Row(
+                      children: const [
+                        Icon(Icons.show_chart, color: Colors.white, size: 16),
+                        SizedBox(width: 6),
+                        Text(
+                          "3%",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                const SizedBox(
+                  height: 120,
+                  child: _LineChart(),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _formatNumber(totalTrips),
+                        style:
+                            Theme.of(context).textTheme.titleLarge?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        "Total Trips",
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodySmall
+                            ?.copyWith(color: AppColors.textMuted),
+                      ),
+                    ],
+                  ),
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      _formatNumber(runningTrips),
+                      style:
+                          Theme.of(context).textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      "Running Trips",
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodySmall
+                          ?.copyWith(color: AppColors.textMuted),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LineChart extends StatelessWidget {
+  const _LineChart();
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      painter: _LineChartPainter(),
+    );
+  }
+}
+
+class _LineChartPainter extends CustomPainter {
+  final List<double> points = const [0.4, 0.3, 0.5, 0.35, 0.65, 0.45];
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white
+      ..strokeWidth = 2.5
+      ..style = PaintingStyle.stroke;
+    final path = Path();
+    for (var i = 0; i < points.length; i++) {
+      final x = size.width * (i / (points.length - 1));
+      final y = size.height * (1 - points[i]);
+      if (i == 0) {
+        path.moveTo(x, y);
+      } else {
+        path.quadraticBezierTo(
+          size.width * ((i - 0.5) / (points.length - 1)),
+          size.height * (1 - points[i - 1]),
+          x,
+          y,
+        );
+      }
+    }
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _RevenueCard extends StatelessWidget {
+  final List<_ChartSlice> slices;
+
+  const _RevenueCard({required this.slices});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "Bus Types",
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+            const SizedBox(height: 16),
+            Center(
+              child: _InteractiveDonutChart(
+                size: 140,
+                slices: slices,
+                onSliceTap: () {},
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: slices
+                  .map(
+                    (slice) => Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                      child: _LegendDot(label: slice.label, color: slice.color),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LegendDot extends StatelessWidget {
+  final String label;
+  final Color color;
+
+  const _LegendDot({required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: Theme.of(context)
+              .textTheme
+              .bodySmall
+              ?.copyWith(color: AppColors.textMuted),
+        ),
+      ],
+    );
+  }
+}
+
+class _TrafficSourceData {
+  final String label;
+  final double value;
+
+  const _TrafficSourceData({required this.label, required this.value});
+}
+
+class _TrafficSourcesCard extends StatelessWidget {
+  final List<_TrafficSourceData> sources;
+
+  const _TrafficSourcesCard({required this.sources});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "Status Overview",
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+            const SizedBox(height: 12),
+            ...sources.map(
+              (source) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: _TrafficSourceRow(source: source),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TrafficSourceRow extends StatelessWidget {
+  final _TrafficSourceData source;
+
+  const _TrafficSourceRow({required this.source});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              source.label,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            Text(
+              "${(source.value * 100).round()}%",
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(6),
+          child: LinearProgressIndicator(
+            value: source.value,
+            minHeight: 6,
+            backgroundColor: AppColors.outline,
+            valueColor: const AlwaysStoppedAnimation(AppColors.primary),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _MiniStatsRow extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final isWide = width >= 800;
+        return Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            SizedBox(
+              width: isWide ? (width - 12) / 2 : width,
+              child: _MiniStatCard(
+                label: "REALTY",
+                value: "-0.99",
+                color: AppColors.danger,
+              ),
+            ),
+            SizedBox(
+              width: isWide ? (width - 12) / 2 : width,
+              child: _MiniStatCard(
+                label: "INFRA",
+                value: "-7.66",
+                color: AppColors.success,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _MiniStatCard extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+
+  const _MiniStatCard({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              label,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 1.1,
+                  ),
+            ),
+            Text(
+              value,
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: color,
+                    fontWeight: FontWeight.w700,
+                  ),
+            ),
+          ],
         ),
       ),
     );
@@ -493,21 +1322,6 @@ class _OwnerCounts {
   });
 }
 
-class _DashboardItem {
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final Widget page;
-  final List<_ChartSlice> slices;
-
-  _DashboardItem({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    required this.page,
-    required this.slices,
-  });
-}
 
 class _ChartSlice {
   final String label;
@@ -605,294 +1419,5 @@ class _InteractiveDonutPainter extends CustomPainter {
       if (oldDelegate.slices[i].value != slices[i].value) return true;
     }
     return false;
-  }
-}
-
-class _StatusGroup {
-  final String title;
-  final int active;
-  final int pending;
-  final int rejected;
-  final Widget page;
-
-  const _StatusGroup({
-    required this.title,
-    required this.active,
-    required this.pending,
-    required this.rejected,
-    required this.page,
-  });
-
-  int get total => active + pending + rejected;
-}
-
-class _SnapshotGrid extends StatelessWidget {
-  final List<_StatusGroup> groups;
-  final List<_DashboardItem> items;
-  final VoidCallback onReportTap;
-
-  const _SnapshotGrid({
-    required this.groups,
-    required this.items,
-    required this.onReportTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final cards = <Widget>[
-      ...groups.map(
-        (group) => _SnapshotCard(
-          title: group.title,
-          subtitle: group.title == "Passengers"
-              ? "Total passengers"
-              : "Active / Pending / Rejected",
-          totalLabel: group.title == "Passengers" ? "Total" : null,
-          totalValue: group.title == "Passengers" ? group.total : null,
-          slices: group.title == "Passengers"
-              ? [
-                  _ChartSlice(
-                    label: "Passengers",
-                    value: group.total,
-                    color: AppColors.primary,
-                  ),
-                ]
-              : [
-                  _ChartSlice(
-                    label: "Active",
-                    value: group.active,
-                    color: AppColors.success,
-                  ),
-                  _ChartSlice(
-                    label: "Pending",
-                    value: group.pending,
-                    color: AppColors.warning,
-                  ),
-                  _ChartSlice(
-                    label: "Rejected",
-                    value: group.rejected,
-                    color: AppColors.danger,
-                  ),
-                ],
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => group.page),
-          ),
-        ),
-      ),
-      ...items.map(
-        (item) => _SnapshotCard(
-          title: item.title,
-          subtitle: item.subtitle,
-          slices: item.slices,
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => item.page),
-          ),
-        ),
-      ),
-      _ReportCard(onTap: onReportTap),
-    ];
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final width = constraints.maxWidth;
-        final crossAxisCount = width >= 1200
-            ? 4
-            : width >= 900
-                ? 3
-                : width >= 600
-                    ? 2
-                    : 1;
-        final spacing = 12.0;
-        final totalSpacing = spacing * (crossAxisCount - 1);
-        final cardWidth = (width - totalSpacing) / crossAxisCount;
-
-        return Wrap(
-          alignment: WrapAlignment.center,
-          spacing: spacing,
-          runSpacing: spacing,
-          children: [
-            for (final card in cards)
-              SizedBox(
-                width: cardWidth,
-                child: card,
-              ),
-          ],
-        );
-      },
-    );
-  }
-}
-
-class _SnapshotCard extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final List<_ChartSlice> slices;
-  final VoidCallback onTap;
-  final String? totalLabel;
-  final int? totalValue;
-
-  const _SnapshotCard({
-    required this.title,
-    required this.subtitle,
-    required this.slices,
-    required this.onTap,
-    this.totalLabel,
-    this.totalValue,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(16),
-      onTap: onTap,
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: _InteractiveDonutChart(
-                  size: 78,
-                  slices: slices,
-                  onSliceTap: onTap,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                title,
-                style: Theme.of(context).textTheme.titleSmall,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                subtitle,
-                style: Theme.of(context)
-                    .textTheme
-                    .bodySmall
-                    ?.copyWith(color: AppColors.textMuted),
-              ),
-              const SizedBox(height: 8),
-              if (totalLabel != null && totalValue != null)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
-                  child: _LegendRow(
-                    color: AppColors.primary,
-                    label: totalLabel!,
-                    value: totalValue!,
-                  ),
-                ),
-              ...slices.map(
-                (slice) => Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: _LegendRow(
-                    color: slice.color,
-                    label: slice.label,
-                    value: slice.value,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _LegendRow extends StatelessWidget {
-  final Color color;
-  final String label;
-  final int value;
-
-  const _LegendRow({
-    required this.color,
-    required this.label,
-    required this.value,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-          ),
-        ),
-        const SizedBox(width: 6),
-        Expanded(
-          child: Text(
-            "$label: $value",
-            style: Theme.of(context)
-                .textTheme
-                .bodySmall
-                ?.copyWith(color: AppColors.textMuted),
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _ReportCard extends StatelessWidget {
-  final VoidCallback onTap;
-
-  const _ReportCard({required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(16),
-      onTap: onTap,
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: const Icon(
-                  Icons.insights_rounded,
-                  color: AppColors.primary,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                "Reports",
-                style: Theme.of(context).textTheme.titleSmall,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                "Open analytics dashboard",
-                style: Theme.of(context)
-                    .textTheme
-                    .bodySmall
-                    ?.copyWith(color: AppColors.textMuted),
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: onTap,
-                  child: const Text("Open"),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 }
