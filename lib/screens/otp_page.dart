@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import '../services/auth_api.dart';
 import '../services/token_store.dart';
-import 'home_page.dart';
-import '../admin/dashboard.dart';
+import '../app_routes.dart';
+import '/admin/dashboard.dart';
 
 /// OTP flow types
 enum OtpFlow {
   signupVerify,      // Passenger signup OTP
-  passengerLogin2fa, // Passenger login OTP
-  adminLogin2fa,     // ✅ Admin login OTP
+  login2fa,          // ✅ Unified login OTP (all roles)
 }
 
 class OtpScreen extends StatefulWidget {
@@ -40,7 +39,6 @@ class _OtpScreenState extends State<OtpScreen> {
   Future<void> _verify() async {
     final otp = _otpController.text.trim();
 
-    // ✅ OTP validation
     if (otp.length != 6) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Enter a valid 6-digit OTP")),
@@ -56,69 +54,70 @@ class _OtpScreenState extends State<OtpScreen> {
       // =======================
       // OTP VERIFICATION LOGIC
       // =======================
-
       if (widget.flow == OtpFlow.signupVerify) {
-        // Passenger signup OTP
+        // Passenger signup OTP (unchanged)
         result = await AuthApi.verifySignupOtp(
           challengeId: widget.challengeId,
           otp: otp,
         );
       } else {
+        // ✅ Unified login OTP (all roles)
         if (widget.tempToken == null) {
           throw Exception("Session expired. Please login again.");
         }
 
-        // Passenger or Admin login OTP
-        if (widget.flow == OtpFlow.adminLogin2fa) {
-          result = await AuthApi.verifyAdminLoginOtp(
-            tempToken: widget.tempToken!,
-            challengeId: widget.challengeId,
-            otp: otp,
-          );
-        } else {
-          result = await AuthApi.verifyLoginOtp(
-            tempToken: widget.tempToken!,
-            challengeId: widget.challengeId,
-            otp: otp,
-          );
-        }
+        result = await AuthApi.verifyUnifiedLoginOtp(
+          tempToken: widget.tempToken!,
+          challengeId: widget.challengeId,
+          otp: otp,
+        );
       }
 
       // =======================
-      // SAVE TOKENS & ROLE
+      // SAVE TOKENS + ROLE
       // =======================
-      final accessToken = result["accessToken"];
-      final refreshToken = result["refreshToken"];
-      final role = result["role"];
+      final accessToken = result["accessToken"] as String?;
+      final refreshToken = result["refreshToken"] as String?;
+      final roleRaw = result["role"];
 
-      if (accessToken == null || refreshToken == null || role == null) {
+      if (accessToken == null || refreshToken == null || roleRaw == null) {
         throw Exception("Invalid authentication response");
       }
+
+      final role = roleRaw.toString().toLowerCase();
 
       await TokenStore.saveTokens(
         accessToken: accessToken,
         refreshToken: refreshToken,
       );
+
       await TokenStore.saveRole(role);
 
-      // 🔍 DEBUG (can remove later)
-      await TokenStore.debugPrintTokens();
+      // Verify saved
+      final storedToken = await TokenStore.getAccessToken();
+      if (storedToken == null || storedToken.isEmpty) {
+        throw Exception("Failed to save access token");
+      }
 
       if (!mounted) return;
 
       // =======================
       // ROLE-BASED NAVIGATION
       // =======================
-      if (role == "admin") {
+      final isStaff = role == "admin" || role == "operator" || role == "driver";
+
+      if (isStaff) {
+        // For now, all staff go to AdminDashboard.
+        // Later you can route operator/driver to their dashboards.
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (_) => const AdminDashboard()),
           (_) => false,
         );
       } else {
-        Navigator.pushAndRemoveUntil(
+        Navigator.pushNamedAndRemoveUntil(
           context,
-          MaterialPageRoute(builder: (_) => const HomePage()),
+          AppRoutes.home,
           (_) => false,
         );
       }
