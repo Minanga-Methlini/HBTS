@@ -2,12 +2,13 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'token_store.dart';
+import '../config.dart';
 
 class ReportApi {
   // Android emulator → backend
-  //static const String baseUrl = "http://10.0.2.2:4000";
+  //static const String baseUrl = "http://10.0.2.2:4000/api";
    //Chrome emulator local
-  static const String baseUrl = "http://localhost:4000"; 
+  static const String baseUrl = AppConfig.baseUrl; 
 
   /// Driver Status Report
   /// Returns: [{ status: "approved", total: 5 }, ...]

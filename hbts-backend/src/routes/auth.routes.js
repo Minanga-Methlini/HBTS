@@ -5,7 +5,9 @@ import {
   passengerLogin,
   passengerVerifyLoginOtp,
   adminLogin,
-  adminVerifyLoginOtp
+  adminVerifyLoginOtp,
+  login,
+  verifyLoginOtp
 } from "../controllers/auth.controller.js";
 import { requireTempToken } from "../middleware/tempAuth.js";
 import { requireAuth } from "../middleware/auth.middleware.js";

@@ -2,12 +2,13 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import 'token_store.dart';
+import '../config.dart';
 
 class AdminApi {
   // 🌐 Backend base URL
-  static const String baseUrl = "http://localhost:4000";
+  static const String baseUrl = AppConfig.baseUrl;
   // Android emulator:
-  // static const String baseUrl = "http://10.0.2.2:4000";
+  // static const String baseUrl = "http://10.0.2.2:4000/api";
 
   // =======================
   // AUTH HEADERS
