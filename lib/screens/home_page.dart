@@ -7,10 +7,7 @@ import '../models/user_model.dart';
 import '../app_routes.dart';
 import 'notifications_page.dart';
 import '../state/notification_store.dart';
-<<<<<<< HEAD
-=======
 import 'track_my_booking_list_page.dart';
->>>>>>> 49efbca (Resolve merge conflicts)
 
 
 class HomePage extends StatefulWidget {
@@ -101,16 +98,12 @@ class _HomePageState extends State<HomePage> {
   // For now it can go to myBookings so you don't break anything.
   void _goUpcomingSchedules() => Navigator.pushNamed(context, AppRoutes.myBookings);
 
-<<<<<<< HEAD
-  void _goTrackBooking() => Navigator.pushNamed(context, AppRoutes.trackMyBooking);
-=======
   void _goTrackBooking() {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const TrackMyBookingListPage()),
     );
   }
->>>>>>> 49efbca (Resolve merge conflicts)
   void _goTrackBus() => Navigator.pushNamed(context, AppRoutes.trackBus);
 
   // Nearest trip card → booking details

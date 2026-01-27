@@ -48,10 +48,9 @@ router.post("/admin/login/verify-otp",
 );
 router.get("/me", requireAuth, getMe);
  
-<<<<<<< HEAD
-export default router;
-=======
 
 export default router;
 
->>>>>>> 13f791f (Add tracking, live location, and token updates)
+
+
+
