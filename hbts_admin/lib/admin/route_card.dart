@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
 class RouteCard extends StatelessWidget {
-  const RouteCard({super.key, required this.route, this.onTap});
+  const RouteCard({super.key, required this.route, this.onTap, this.onRestore});
 
   final Map<String, dynamic> route;
   final VoidCallback? onTap;
+  final VoidCallback? onRestore;
 
   String _pickString(List<String> keys, {String fallback = "-"}) {
     for (final key in keys) {
@@ -107,6 +108,17 @@ class RouteCard extends StatelessWidget {
               _InfoRow(label: "Created", value: createdAt),
               const SizedBox(height: 6),
               _InfoRow(label: "Updated", value: updatedAt),
+              if (onRestore != null) ...[
+                const SizedBox(height: 12),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: OutlinedButton.icon(
+                    onPressed: onRestore,
+                    icon: const Icon(Icons.restore),
+                    label: const Text("Restore"),
+                  ),
+                ),
+              ],
             ],
           ),
         ),

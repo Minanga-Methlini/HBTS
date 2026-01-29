@@ -40,6 +40,35 @@ class _BusHistoryPageState extends State<BusHistoryPage> {
     }
   }
 
+  int? _busId(Map<String, dynamic> bus) {
+    final raw = bus["bus_id"] ?? bus["busId"] ?? bus["id"];
+    if (raw == null) return null;
+    return int.tryParse(raw.toString());
+  }
+
+  Future<void> _restoreBus(Map<String, dynamic> bus) async {
+    final id = _busId(bus);
+    if (id == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Bus ID not found")),
+      );
+      return;
+    }
+    try {
+      await AdminApi.restoreBus(id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Bus restored")),
+      );
+      await _loadHistory();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -63,7 +92,10 @@ class _BusHistoryPageState extends State<BusHistoryPage> {
                           separatorBuilder: (_, __) =>
                               const SizedBox(height: 12),
                           itemBuilder: (_, index) {
-                            return BusCard(bus: _buses[index]);
+                            return BusCard(
+                              bus: _buses[index],
+                              onRestore: () => _restoreBus(_buses[index]),
+                            );
                           },
                         ),
                 ),

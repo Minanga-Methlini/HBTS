@@ -180,7 +180,7 @@ class _DriverListTabState extends State<DriverListTab> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text("License: $license"),
-                  Text("Bus Owner: $operatorName"),
+                  Text("Bus Operator: $operatorName"),
                   Text("Phone: $phone"),
                   if (widget.status == "rejected" &&
                       rejectionReason.trim().isNotEmpty)
@@ -244,4 +244,3 @@ class _DriverListTabState extends State<DriverListTab> {
     );
   }
 }
-

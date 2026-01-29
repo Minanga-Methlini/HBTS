@@ -40,6 +40,35 @@ class _TripHistoryPageState extends State<TripHistoryPage> {
     }
   }
 
+  int? _tripId(Map<String, dynamic> trip) {
+    final raw = trip["trip_id"] ?? trip["tripId"] ?? trip["id"];
+    if (raw == null) return null;
+    return int.tryParse(raw.toString());
+  }
+
+  Future<void> _restoreTrip(Map<String, dynamic> trip) async {
+    final id = _tripId(trip);
+    if (id == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Trip ID not found")),
+      );
+      return;
+    }
+    try {
+      await AdminApi.restoreTrip(id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Trip restored")),
+      );
+      await _loadHistory();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -63,7 +92,10 @@ class _TripHistoryPageState extends State<TripHistoryPage> {
                           separatorBuilder: (_, __) =>
                               const SizedBox(height: 12),
                           itemBuilder: (_, index) {
-                            return TripCard(trip: _trips[index]);
+                            return TripCard(
+                              trip: _trips[index],
+                              onRestore: () => _restoreTrip(_trips[index]),
+                            );
                           },
                         ),
                 ),

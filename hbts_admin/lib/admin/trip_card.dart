@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
 class TripCard extends StatelessWidget {
-  const TripCard({super.key, required this.trip, this.onTap});
+  const TripCard({super.key, required this.trip, this.onTap, this.onRestore});
 
   final Map<String, dynamic> trip;
   final VoidCallback? onTap;
+  final VoidCallback? onRestore;
 
   String _value(String key, {String fallback = "-"}) {
     final v = trip[key];
@@ -107,6 +108,17 @@ class TripCard extends StatelessWidget {
               _InfoRow(label: "Depart", value: departure),
               const SizedBox(height: 6),
               _InfoRow(label: "Arrive", value: arrival),
+              if (onRestore != null) ...[
+                const SizedBox(height: 12),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: OutlinedButton.icon(
+                    onPressed: onRestore,
+                    icon: const Icon(Icons.restore),
+                    label: const Text("Restore"),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -225,14 +237,18 @@ String _formatDateTime(dynamic value) {
 
 String _statusLabel(String value) {
   final normalized = value.toLowerCase().trim();
-  if (normalized.contains("progress")) return "running";
+  if (normalized.contains("progress") || normalized.contains("running")) {
+    return "running";
+  }
   return normalized.isEmpty ? "scheduled" : value;
 }
 
 Color _statusColor(String value) {
   final normalized = value.toLowerCase().trim();
   if (normalized.contains("cancel")) return AppColors.danger;
-  if (normalized.contains("progress")) return AppColors.accent;
+  if (normalized.contains("progress") || normalized.contains("running")) {
+    return AppColors.primary;
+  }
   if (normalized.contains("complete")) return AppColors.success;
   return AppColors.warning;
 }

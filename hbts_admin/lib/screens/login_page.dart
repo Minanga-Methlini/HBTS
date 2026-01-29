@@ -239,7 +239,7 @@ final int challengeId = int.parse(challengeIdRaw.toString());
                                         context,
                                         MaterialPageRoute(
                                           builder: (_) =>
-                                              const SignupScreen(),
+                                              const SignupScreen(allowSignup: false),
                                         ),
                                       );
                                     },

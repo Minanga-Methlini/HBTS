@@ -18,12 +18,16 @@ class OtpScreen extends StatefulWidget {
   final OtpFlow flow;
   final int challengeId;
   final String? tempToken;
+  final bool saveTokens;
+  final VoidCallback? onVerified;
 
   const OtpScreen({
     super.key,
     required this.flow,
     required this.challengeId,
     this.tempToken,
+    this.saveTokens = true,
+    this.onVerified,
   });
 
   @override
@@ -85,6 +89,20 @@ class _OtpScreenState extends State<OtpScreen> {
             otp: otp,
           );
         }
+      }
+
+      if (!mounted) return;
+
+      if (!widget.saveTokens) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Account verified successfully")),
+        );
+        if (widget.onVerified != null) {
+          widget.onVerified!();
+        } else {
+          Navigator.pop(context);
+        }
+        return;
       }
 
       // =======================

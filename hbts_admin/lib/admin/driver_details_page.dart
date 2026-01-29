@@ -147,9 +147,9 @@ class _DriverDetailsPageState extends State<DriverDetailsPage> {
                     _detailRow("Driver ID", _safe(driver?["driver_id"])),
                     _detailRow("License", _safe(driver?["license_number"])),
                     _detailRow("Phone", _safe(driver?["phone"])),
-                    _detailRow("Bus Owner", _safe(driver?["operator_name"])),
+                    _detailRow("Bus Operator", _safe(driver?["operator_name"])),
                     _detailRow("User ID", _safe(driver?["user_id"])),
-                    _detailRow("Bus Owner ID", _safe(driver?["operator_id"])),
+                    _detailRow("Bus Operator ID", _safe(driver?["operator_id"])),
                     _detailRow("Source", _safe(driver?["source"])),
                     _detailRow(
                       "Joined",

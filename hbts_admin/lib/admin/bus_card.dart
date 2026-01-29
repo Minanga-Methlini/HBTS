@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
 class BusCard extends StatelessWidget {
-  const BusCard({super.key, required this.bus, this.onTap});
+  const BusCard({super.key, required this.bus, this.onTap, this.onRestore});
 
   final Map<String, dynamic> bus;
   final VoidCallback? onTap;
+  final VoidCallback? onRestore;
 
   @override
   Widget build(BuildContext context) {
@@ -90,6 +91,17 @@ class BusCard extends StatelessWidget {
               _InfoRow(label: "Created", value: createdAt),
               const SizedBox(height: 6),
               _InfoRow(label: "Updated", value: updatedAt),
+              if (onRestore != null) ...[
+                const SizedBox(height: 12),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: OutlinedButton.icon(
+                    onPressed: onRestore,
+                    icon: const Icon(Icons.restore),
+                    label: const Text("Restore"),
+                  ),
+                ),
+              ],
             ],
           ),
         ),

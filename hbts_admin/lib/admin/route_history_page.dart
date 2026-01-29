@@ -40,6 +40,35 @@ class _RouteHistoryPageState extends State<RouteHistoryPage> {
     }
   }
 
+  int? _routeId(Map<String, dynamic> route) {
+    final raw = route["route_id"] ?? route["routeId"] ?? route["id"];
+    if (raw == null) return null;
+    return int.tryParse(raw.toString());
+  }
+
+  Future<void> _restoreRoute(Map<String, dynamic> route) async {
+    final id = _routeId(route);
+    if (id == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Route ID not found")),
+      );
+      return;
+    }
+    try {
+      await AdminApi.restoreRoute(id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Route restored")),
+      );
+      await _loadHistory();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -63,7 +92,10 @@ class _RouteHistoryPageState extends State<RouteHistoryPage> {
                           separatorBuilder: (_, __) =>
                               const SizedBox(height: 12),
                           itemBuilder: (_, index) {
-                            return RouteCard(route: _routes[index]);
+                            return RouteCard(
+                              route: _routes[index],
+                              onRestore: () => _restoreRoute(_routes[index]),
+                            );
                           },
                         ),
                 ),

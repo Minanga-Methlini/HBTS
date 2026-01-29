@@ -3,13 +3,15 @@ import 'dart:math';
 import 'customers_page.dart';
 import 'drivers_dashboard.dart';
 import 'operators_dashboard.dart';
-import 'reports_dashboard.dart';
 import 'buses_page.dart';
 import 'routes_page.dart';
 import 'trips_page.dart';
 import 'report_card_page.dart';
+import '../screens/login_page.dart';
+import '../screens/signup_page.dart';
 import '../services/admin_api.dart';
 import '../services/driver_admin_api.dart';
+import '../services/token_store.dart';
 import '../theme/app_theme.dart';
 
 class AdminDashboard extends StatefulWidget {
@@ -289,7 +291,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         icon: Icons.badge_outlined,
       ),
       _StatCardData(
-        title: "Bus Owners",
+        title: "Bus Operators",
         value: _formatNumber(totalOwners),
         subtitle: "Active: ${_formatNumber(_ownerActive)}",
         footer:
@@ -345,7 +347,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         pageBuilder: (_) => const DriversDashboard(),
       ),
       _NavItem(
-        label: "Bus Owners",
+        label: "Bus Operators",
         icon: Icons.business_center_outlined,
         pageBuilder: (_) => const OperatorsDashboard(),
       ),
@@ -366,11 +368,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
       ),
       _NavItem(
         label: "Reports",
-        icon: Icons.insights_outlined,
-        pageBuilder: (_) => const ReportsDashboard(),
-      ),
-      _NavItem(
-        label: "Report Cards",
         icon: Icons.picture_as_pdf_outlined,
         pageBuilder: (_) => ReportCardPage(),
       ),
@@ -397,6 +394,23 @@ class _AdminDashboardState extends State<AdminDashboard> {
           appBar: _DashboardAppBar(
             showMenu: !isWide,
             onMenuTap: () => _scaffoldKey.currentState?.openDrawer(),
+            onAddAdmin: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const SignupScreen(allowSignup: true),
+                ),
+              );
+            },
+            onLogout: () async {
+              await TokenStore.clear();
+              if (!mounted) return;
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (_) => const LoginScreen()),
+                (_) => false,
+              );
+            },
           ),
           drawer: isWide ? null : Drawer(child: sidebar),
           body: Row(
@@ -462,10 +476,14 @@ class _NavItem {
 class _DashboardAppBar extends StatelessWidget implements PreferredSizeWidget {
   final bool showMenu;
   final VoidCallback onMenuTap;
+  final VoidCallback onAddAdmin;
+  final VoidCallback onLogout;
 
   const _DashboardAppBar({
     required this.showMenu,
     required this.onMenuTap,
+    required this.onAddAdmin,
+    required this.onLogout,
   });
 
   @override
@@ -501,37 +519,28 @@ class _DashboardAppBar extends StatelessWidget implements PreferredSizeWidget {
         ],
       ),
       actions: [
-        if (MediaQuery.of(context).size.width >= 900)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            child: Container(
-              width: 260,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: TextField(
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  hintText: "Search...",
-                  hintStyle: const TextStyle(color: Color(0xFFDAE2FF)),
-                  prefixIcon: const Icon(Icons.search, color: Colors.white),
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-                ),
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: ElevatedButton.icon(
+            onPressed: onAddAdmin,
+            icon: const Icon(Icons.person_add_alt_1),
+            label: const Text("Add Admin"),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: AppColors.primary,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
               ),
             ),
           ),
-        IconButton(
-          onPressed: () {},
-          icon: const Icon(Icons.notifications_none_outlined),
         ),
-        Padding(
-          padding: const EdgeInsets.only(right: 12),
-          child: CircleAvatar(
-            radius: 16,
-            backgroundColor: Colors.white.withOpacity(0.2),
-            child: const Icon(Icons.person_outline, color: Colors.white),
+        TextButton.icon(
+          onPressed: onLogout,
+          icon: const Icon(Icons.logout, color: Colors.white),
+          label: const Text(
+            "Logout",
+            style: TextStyle(color: Colors.white),
           ),
         ),
       ],
@@ -556,62 +565,28 @@ class _Sidebar extends StatelessWidget {
       width: 240,
       color: Colors.white,
       child: SafeArea(
-        child: Padding(
+        child: ListView(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "HBTS",
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: AppColors.textMuted,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 1.2,
-                    ),
+          children: [
+            Text(
+              "HBTS",
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: AppColors.textMuted,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 1.2,
+                  ),
+            ),
+            const SizedBox(height: 12),
+            ...List.generate(
+              navItems.length,
+              (index) => _SidebarItem(
+                label: navItems[index].label,
+                icon: navItems[index].icon,
+                selected: index == activeIndex,
+                onTap: () => onTap(index),
               ),
-              const SizedBox(height: 12),
-              ...List.generate(
-                navItems.length,
-                (index) => _SidebarItem(
-                  label: navItems[index].label,
-                  icon: navItems[index].icon,
-                  selected: index == activeIndex,
-                  onTap: () => onTap(index),
-                ),
-              ),
-              const SizedBox(height: 20),
-              Text(
-                "SUPPORT",
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: AppColors.textMuted,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 1.2,
-                    ),
-              ),
-              const SizedBox(height: 12),
-              _SidebarItem(
-                label: "Documentation",
-                icon: Icons.help_outline,
-                selected: false,
-                onTap: () {},
-              ),
-              const Spacer(),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  children: const [
-                    Icon(Icons.support_agent, color: AppColors.primary),
-                    SizedBox(width: 8),
-                    Expanded(child: Text("Need help?")),
-                  ],
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

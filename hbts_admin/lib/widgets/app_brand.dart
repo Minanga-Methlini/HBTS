@@ -30,7 +30,7 @@ class AppBrand extends StatelessWidget {
             ],
           ),
           child: const Icon(
-            Icons.route_rounded,
+            Icons.support_agent_rounded,
             color: AppColors.accent,
             size: 48,
           ),

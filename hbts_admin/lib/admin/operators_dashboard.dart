@@ -70,7 +70,7 @@ class _OperatorsDashboardState extends State<OperatorsDashboard>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Bus Owners Dashboard"),
+        title: const Text("Bus Operators Dashboard"),
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
@@ -89,7 +89,7 @@ class _OperatorsDashboardState extends State<OperatorsDashboard>
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 child: TextField(
                   decoration: const InputDecoration(
-                    hintText: "Search bus owner...",
+                    hintText: "Search bus operator...",
                     prefixIcon: Icon(Icons.search),
                     border: InputBorder.none,
                   ),
@@ -142,7 +142,7 @@ class _OperatorList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (operators.isEmpty) {
-      return const Center(child: Text("No bus owners found"));
+      return const Center(child: Text("No bus operators found"));
     }
 
     return ListView.separated(

@@ -199,7 +199,7 @@ class AdminApi {
     }
 
     if (res.statusCode != 200) {
-      throw Exception("Failed to load bus owners (${res.statusCode})");
+      throw Exception("Failed to load bus operators (${res.statusCode})");
     }
 
     final data = _decode(res);
@@ -310,6 +310,23 @@ class AdminApi {
 
     if (res.statusCode != 200) {
       throw Exception("Failed to delete bus (${res.statusCode})");
+    }
+  }
+
+  // =======================
+  // RESTORE BUS (SOFT DELETE)
+  // PUT /admin/buses/:id/restore
+  // =======================
+  static Future<void> restoreBus(int id) async {
+    final uri = Uri.parse("$baseUrl/admin/buses/$id/restore");
+
+    final res = await http.put(
+      uri,
+      headers: await _headers(),
+    );
+
+    if (res.statusCode != 200) {
+      throw Exception("Failed to restore bus (${res.statusCode})");
     }
   }
 
@@ -438,6 +455,23 @@ class AdminApi {
   }
 
   // =======================
+  // RESTORE ROUTE (SOFT DELETE)
+  // PUT /admin/routes/:id/restore
+  // =======================
+  static Future<void> restoreRoute(int id) async {
+    final uri = Uri.parse("$baseUrl/admin/routes/$id/restore");
+
+    final res = await http.put(
+      uri,
+      headers: await _headers(),
+    );
+
+    if (res.statusCode != 200) {
+      throw Exception("Failed to restore route (${res.statusCode})");
+    }
+  }
+
+  // =======================
   // ROUTE HISTORY (DELETED)
   // GET /admin/routes/history
   // =======================
@@ -558,6 +592,23 @@ class AdminApi {
 
     if (res.statusCode != 200) {
       throw Exception("Failed to delete trip (${res.statusCode})");
+    }
+  }
+
+  // =======================
+  // RESTORE TRIP (SOFT DELETE)
+  // PUT /admin/trips/:id/restore
+  // =======================
+  static Future<void> restoreTrip(int id) async {
+    final uri = Uri.parse("$baseUrl/admin/trips/$id/restore");
+
+    final res = await http.put(
+      uri,
+      headers: await _headers(),
+    );
+
+    if (res.statusCode != 200) {
+      throw Exception("Failed to restore trip (${res.statusCode})");
     }
   }
 

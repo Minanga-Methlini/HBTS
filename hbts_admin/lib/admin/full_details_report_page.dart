@@ -95,7 +95,7 @@ class _FullDetailsReportPageState extends State<FullDetailsReportPage>
           tabs: const [
             Tab(text: "Passengers"),
             Tab(text: "Drivers"),
-            Tab(text: "Bus Owners"),
+            Tab(text: "Bus Operators"),
           ],
         ),
       ),
@@ -225,7 +225,7 @@ class _DriverList extends StatelessWidget {
         return _Tile(
           title: _safe(d["name"]),
           subtitle:
-              "License: ${_safe(d["license_number"])}\nPhone: ${_safe(d["phone"])}\nBus Owner: ${_safe(d["operator_name"])}",
+              "License: ${_safe(d["license_number"])}\nPhone: ${_safe(d["phone"])}\nBus Operator: ${_safe(d["operator_name"])}",
           badge: status.toUpperCase(),
           badgeColor: color,
         );
@@ -242,7 +242,7 @@ class _OwnerList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (items.isEmpty) return const Center(child: Text("No bus owners found"));
+    if (items.isEmpty) return const Center(child: Text("No bus operators found"));
 
     return ListView.separated(
       padding: const EdgeInsets.all(12),

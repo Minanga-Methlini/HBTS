@@ -42,7 +42,7 @@ class _BusSearchPageState extends State<BusSearchPage> {
 
     try {
       final busId = _parseInt(_busIdCtrl.text, "Bus Id");
-      final operatorId = _parseInt(_operatorIdCtrl.text, "Bus Owner Id");
+      final operatorId = _parseInt(_operatorIdCtrl.text, "Bus Operator Id");
       final capacity = _parseInt(_capacityCtrl.text, "Capacity");
 
       final data = await AdminApi.getBuses(
@@ -183,7 +183,7 @@ class _BusSearchPageState extends State<BusSearchPage> {
                               keyboardType: TextInputType.number,
                             ),
                             _buildSearchTile(
-                              label: "Bus Owner Id",
+                              label: "Bus Operator Id",
                               controller: _operatorIdCtrl,
                               keyboardType: TextInputType.number,
                             ),
