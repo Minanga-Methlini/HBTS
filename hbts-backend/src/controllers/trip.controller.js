@@ -205,6 +205,19 @@ export async function pushTripLocation(req, res) {
 
     const loc = up.rows[0];
 
+    await pool.query(
+      `INSERT INTO trip_location_history (trip_id, lat, lng, speed, heading, recorded_at)
+       VALUES ($1,$2,$3,$4,$5,$6)`,
+      [
+        tripId,
+        latNum,
+        lonNum,
+        speedMps != null ? Number(speedMps) : null,
+        heading != null ? Number(heading) : null,
+        gpsAtTs,
+      ]
+    );
+
     await broadcastTripLocation(tripId, {
       trip_id: Number(loc.trip_id),
       lat: Number(loc.lat),

@@ -25,6 +25,9 @@ import notificationRoutes from "./routes/notification.routes.js";
 import { initNotificationWS } from "./ws/notification.ws.js";
 import { initTrackingWS } from "./ws/tracking.ws.js";
 
+import routeRoutes from "./routes/route.routes.js";
+
+
 const app = express();
 
 app.use(
@@ -45,6 +48,8 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/trips", tripRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/routes", routeRoutes);
+
 
 app.get("/health", (req, res) => res.json({ ok: true }));
 app.get("/", (req, res) => res.send("HBTS Backend is running 🚀"));
