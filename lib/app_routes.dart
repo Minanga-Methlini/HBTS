@@ -16,7 +16,6 @@ import 'screens/confirm_booking_page.dart';
 import 'screens/booking_success_page.dart';
 
 import 'admin/dashboard.dart';
-import 'screens/upcoming_today_page.dart';
 
 
 class AppRoutes {
@@ -28,7 +27,6 @@ class AppRoutes {
   static const trackMyBooking = '/track-my-booking';
   static const trackBus = '/track-bus';
   static const notifications = '/notifications';
-  static const upcomingToday = '/upcoming-today';
 
 
   static const tripDetails = '/trip-details';
@@ -70,10 +68,6 @@ class AppRoutes {
 
       case trackBus:
         return MaterialPageRoute(builder: (_) => const TrackBusPage());
-
-
-      case upcomingToday: 
-      return MaterialPageRoute(builder: (_) => const UpcomingTodayPage());  
 
       // ✅ NEW FLOW ROUTES (must be BEFORE default)
       case tripDetails:

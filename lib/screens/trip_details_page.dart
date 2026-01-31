@@ -49,9 +49,9 @@ class TripDetailsPage extends StatelessWidget {
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      _Info(label: "Depart", value: _fmtTime(t.departureTime.toLocal())),
+                      _Info(label: "Depart", value: _fmtTime(t.departureTime)),
                       const SizedBox(width: 10),
-                      _Info(label: "Arrive", value: _fmtTime(t.arrivalTime.toLocal())),
+                      _Info(label: "Arrive", value: _fmtTime(t.arrivalTime)),
                       const SizedBox(width: 10),
                       _Info(label: "Type", value: t.serviceType),
                     ],

@@ -7,9 +7,6 @@ import '../models/user_model.dart';
 import '../app_routes.dart';
 import 'notifications_page.dart';
 import '../state/notification_store.dart';
-import '../api/booking_api.dart';
-import '../models/my_booking_item.dart';
-import 'booking_details_page.dart';
 
 
 class HomePage extends StatefulWidget {
@@ -24,8 +21,6 @@ class _HomePageState extends State<HomePage> {
   AppUser? _user;
 
   int _navIndex = 0;
-  UpcomingTripUiModel? _upcomingTrip;
-  MyBookingItem? _upcomingBooking;
 
   @override
   void initState() {
@@ -46,59 +41,9 @@ class _HomePageState extends State<HomePage> {
 
     try {
       final me = await UserApi.fetchLoggedInUser();
-      // Attempt to fetch bookings to compute nearest upcoming
-      List<MyBookingItem> myBookings = const [];
-      try {
-        myBookings = await BookingApi.getMyBookings();
-      } catch (_) {}
-
-      final now = DateTime.now();
-      final nowLocal = now;
-      debugPrint("upcoming count before filter = ${myBookings.length}");
-      for (final b in myBookings) {
-        debugPrint(
-          "HOME booking ${b.bookingId} tripStatus=${b.tripStatus} "
-          "depUtc=${b.departureTime} depLocal=${b.departureTime.toLocal()} now=$nowLocal",
-        );
-      }
-      final upcoming = myBookings
-          .where((b) {
-            final trip = b.tripStatus.toLowerCase().trim();
-            final st = b.status.toLowerCase().trim();
-            if (trip == 'cancelled' || st == 'cancelled' || trip == 'completed') return false;
-            return b.departureTime.toLocal().isAfter(now);
-          })
-          .toList()
-        ..sort((a, b) => a.departureTime.compareTo(b.departureTime));
-      debugPrint("upcoming count after filter = ${upcoming.length}");
-
-      UpcomingTripUiModel? up;
-      MyBookingItem? upBooking;
-      if (upcoming.isNotEmpty) {
-        final first = upcoming.first;
-        final dep = first.departureTime.toLocal();
-        final dateText = "${dep.day.toString().padLeft(2, '0')}/${dep.month.toString().padLeft(2, '0')}/${dep.year}";
-        final hh = ((dep.hour % 12 == 0) ? 12 : (dep.hour % 12));
-        final mm = dep.minute.toString().padLeft(2, '0');
-        final ampm = dep.hour >= 12 ? 'PM' : 'AM';
-        final timeText = "$hh:$mm $ampm";
-        up = UpcomingTripUiModel(
-          from: first.fromLocation,
-          to: first.toLocation,
-          dateText: dateText,
-          timeText: timeText,
-          seatText: "Seat: ${first.seatLabel}",
-          status: first.tripStatus,
-        );
-        upBooking = first;
-      }
-
       if (!mounted) return;
-      debugPrint("HOME upcomingTrip is ${up != null ? 'NOT NULL' : 'NULL'}");
       setState(() {
         _user = me;
-        _upcomingTrip = up;
-        _upcomingBooking = upBooking;
         _loading = false;
       });
     } catch (e) {
@@ -150,21 +95,14 @@ class _HomePageState extends State<HomePage> {
 
   // This should become your "Upcoming Schedules (today)" page later.
   // For now it can go to myBookings so you don't break anything.
-  void _goUpcomingSchedules() => Navigator.pushNamed(context, AppRoutes.upcomingToday);
+  void _goUpcomingSchedules() => Navigator.pushNamed(context, AppRoutes.myBookings);
 
   void _goTrackBooking() => Navigator.pushNamed(context, AppRoutes.trackMyBooking);
   void _goTrackBus() => Navigator.pushNamed(context, AppRoutes.trackBus);
 
   // Nearest trip card → booking details
   // Wire args later using your existing logic/models.
-  void _goNearestTripDetails() {
-    final b = _upcomingBooking;
-    if (b == null) return;
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => BookingDetailsPage(item: b)),
-    );
-  }
+  void _goNearestTripDetails() => Navigator.pushNamed(context, AppRoutes.myBookings);
 
   void _onBottomNavTap(int index) {
     setState(() => _navIndex = index);
@@ -241,7 +179,8 @@ class _HomePageState extends State<HomePage> {
     final user = _user!;
     final hasPhoto = user.profileImage != null && user.profileImage!.trim().isNotEmpty;
 
-    final UpcomingTripUiModel? upcomingTrip = _upcomingTrip;
+    // Placeholder: later wire to real "nearest upcoming trip"
+    final UpcomingTripUiModel? upcomingTrip = null;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7FAFF),
@@ -456,7 +395,6 @@ class _HomeBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    debugPrint("HOME BODY upcomingTrip = ${upcomingTrip == null ? 'NULL' : 'HAS DATA'}");
     final blue = Colors.blue.shade700;
 
     return ListView(
@@ -497,11 +435,9 @@ class _HomeBody extends StatelessWidget {
         if (upcomingTrip != null) ...[
           _UpcomingTripCard(trip: upcomingTrip!, onTap: onUpcomingTripTap),
           const SizedBox(height: 14),
-        ] else ...[
-          _EmptyUpcomingCard(onTapReserve: onSearch),
-          const SizedBox(height: 14),
         ],
 
+        const SizedBox(height: 14),
 
         // 2) Search card
         Container(
@@ -740,7 +676,6 @@ class _UpcomingTripCard extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
                     color: Colors.green.shade400,
-                    border: Border.all(color: Colors.red, width: 2),
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
