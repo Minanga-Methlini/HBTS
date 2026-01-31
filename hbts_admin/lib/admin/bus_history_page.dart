@@ -89,7 +89,7 @@ class _BusHistoryPageState extends State<BusHistoryPage> {
                       : ListView.separated(
                           padding: const EdgeInsets.all(12),
                           itemCount: _buses.length,
-                          separatorBuilder: (_, __) =>
+                          separatorBuilder: (context, index) =>
                               const SizedBox(height: 12),
                           itemBuilder: (_, index) {
                             return BusCard(
@@ -102,3 +102,4 @@ class _BusHistoryPageState extends State<BusHistoryPage> {
     );
   }
 }
+

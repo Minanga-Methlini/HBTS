@@ -37,7 +37,7 @@ class BusCard extends StatelessWidget {
                     width: 56,
                     height: 56,
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.12),
+                      color: AppColors.primary.withAlpha((0.12 * 255).round()),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: const Icon(
@@ -154,7 +154,7 @@ class _Tag extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.08),
+        color: AppColors.primary.withAlpha((0.08 * 255).round()),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.outline),
       ),
@@ -180,7 +180,7 @@ class _Badge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
+        color: color.withAlpha((0.12 * 255).round()),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
@@ -213,5 +213,6 @@ Color _serviceTypeColor(String value) {
   if (normalized.contains("normal")) return AppColors.warning;
   return AppColors.primary;
 }
+
 
 

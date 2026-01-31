@@ -16,7 +16,8 @@ void main() {
 
   setUp(() {
     TestWidgetsFlutterBinding.ensureInitialized();
-    secureStorageChannel.setMockMethodCallHandler((call) async {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(secureStorageChannel, (call) async {
       switch (call.method) {
         case 'read':
           return null;
@@ -31,7 +32,8 @@ void main() {
   });
 
   tearDown(() {
-    secureStorageChannel.setMockMethodCallHandler(null);
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(secureStorageChannel, null);
   });
 
   testWidgets('App loads login screen when no role', (WidgetTester tester) async {

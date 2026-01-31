@@ -175,7 +175,7 @@ class _PassengerList extends StatelessWidget {
     return ListView.separated(
       padding: const EdgeInsets.all(12),
       itemCount: items.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
+      separatorBuilder: (context, index) => const SizedBox(height: 10),
       itemBuilder: (_, index) {
         final p = items[index];
         final verified = p["is_verified"] == true ? "Verified" : "Unverified";
@@ -217,7 +217,7 @@ class _DriverList extends StatelessWidget {
     return ListView.separated(
       padding: const EdgeInsets.all(12),
       itemCount: items.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
+      separatorBuilder: (context, index) => const SizedBox(height: 10),
       itemBuilder: (_, index) {
         final d = items[index];
         final status = _safe(d["status"]);
@@ -247,7 +247,7 @@ class _OwnerList extends StatelessWidget {
     return ListView.separated(
       padding: const EdgeInsets.all(12),
       itemCount: items.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
+      separatorBuilder: (context, index) => const SizedBox(height: 10),
       itemBuilder: (_, index) {
         final op = items[index];
         final status = _safe(op["status"]);
@@ -283,7 +283,7 @@ class _Tile extends StatelessWidget {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: badgeColor.withOpacity(0.12),
+          backgroundColor: badgeColor.withAlpha((0.12 * 255).round()),
           child: Icon(Icons.info, color: badgeColor),
         ),
         title: Text(
@@ -297,7 +297,7 @@ class _Tile extends StatelessWidget {
         trailing: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           decoration: BoxDecoration(
-            color: badgeColor.withOpacity(0.1),
+            color: badgeColor.withAlpha((0.1 * 255).round()),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Text(
@@ -312,3 +312,5 @@ class _Tile extends StatelessWidget {
     );
   }
 }
+
+

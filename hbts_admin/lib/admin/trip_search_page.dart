@@ -253,7 +253,7 @@ class _TripSearchPageState extends State<TripSearchPage> {
                         : ListView.separated(
                             padding: const EdgeInsets.all(12),
                             itemCount: _results.length,
-                            separatorBuilder: (_, __) =>
+                            separatorBuilder: (context, index) =>
                                 const SizedBox(height: 12),
                             itemBuilder: (_, index) => TripCard(
                               trip: _results[index],
@@ -266,3 +266,4 @@ class _TripSearchPageState extends State<TripSearchPage> {
     );
   }
 }
+

@@ -189,8 +189,8 @@ class _ReportCardPageState extends State<ReportCardPage> {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    AppColors.primary.withOpacity(0.15),
-                    AppColors.accent.withOpacity(0.18),
+                    AppColors.primary.withAlpha((0.15 * 255).round()),
+                    AppColors.accent.withAlpha((0.18 * 255).round()),
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -204,7 +204,7 @@ class _ReportCardPageState extends State<ReportCardPage> {
                     width: 54,
                     height: 54,
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.2),
+                      color: AppColors.primary.withAlpha((0.2 * 255).round()),
                       borderRadius: BorderRadius.circular(14),
                     ),
                     child: const Icon(
@@ -351,7 +351,7 @@ class _ReportCardPageState extends State<ReportCardPage> {
                               width: 26,
                               height: 26,
                               decoration: BoxDecoration(
-                                color: AppColors.primary.withOpacity(0.15),
+                                color: AppColors.primary.withAlpha((0.15 * 255).round()),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: const Icon(
@@ -416,7 +416,7 @@ class _ReportCardPageState extends State<ReportCardPage> {
                               width: 26,
                               height: 26,
                               decoration: BoxDecoration(
-                                color: AppColors.accent.withOpacity(0.18),
+                                color: AppColors.accent.withAlpha((0.18 * 255).round()),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: const Icon(
@@ -480,7 +480,7 @@ class _ReportCardPageState extends State<ReportCardPage> {
                                           ),
                                           decoration: BoxDecoration(
                                             color: _statusColor(status)
-                                                .withOpacity(0.12),
+                                                .withAlpha((0.12 * 255).round()),
                                             borderRadius:
                                                 BorderRadius.circular(12),
                                           ),
@@ -505,7 +505,7 @@ class _ReportCardPageState extends State<ReportCardPage> {
                                 ),
                               ),
                             );
-                          }).toList(),
+                          }),
                       ],
                     ),
                   ),
@@ -533,12 +533,12 @@ class _SummaryTile extends StatelessWidget {
       width: 160,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
+        color: color.withAlpha((0.08 * 255).round()),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.outline),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withAlpha((0.04 * 255).round()),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -564,3 +564,4 @@ class _SummaryTile extends StatelessWidget {
     );
   }
 }
+

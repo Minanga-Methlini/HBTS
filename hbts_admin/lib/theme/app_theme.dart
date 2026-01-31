@@ -89,7 +89,7 @@ class AppTheme {
       cardTheme: CardThemeData(
         color: AppColors.card,
         elevation: 3,
-        shadowColor: Colors.black.withOpacity(0.08),
+        shadowColor: Colors.black.withAlpha((0.08 * 255).round()),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
@@ -155,3 +155,4 @@ class AppTheme {
     );
   }
 }
+

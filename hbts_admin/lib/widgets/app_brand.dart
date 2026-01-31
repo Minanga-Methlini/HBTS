@@ -23,7 +23,7 @@ class AppBrand extends StatelessWidget {
             borderRadius: BorderRadius.circular(26),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.15),
+                color: Colors.black.withAlpha((0.15 * 255).round()),
                 blurRadius: 18,
                 offset: const Offset(0, 8),
               ),
@@ -54,3 +54,4 @@ class AppBrand extends StatelessWidget {
     );
   }
 }
+

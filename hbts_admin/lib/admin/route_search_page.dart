@@ -236,7 +236,7 @@ class _RouteSearchPageState extends State<RouteSearchPage> {
                         : ListView.separated(
                             padding: const EdgeInsets.all(12),
                             itemCount: _results.length,
-                            separatorBuilder: (_, __) =>
+                            separatorBuilder: (context, index) =>
                                 const SizedBox(height: 12),
                             itemBuilder: (_, index) => RouteCard(
                               route: _results[index],
@@ -249,3 +249,4 @@ class _RouteSearchPageState extends State<RouteSearchPage> {
     );
   }
 }
+

@@ -45,7 +45,7 @@ class _ReportsPageState extends State<ReportsPage> {
                 return Card(
                   child: ListTile(
                     leading: CircleAvatar(
-                      backgroundColor: color.withOpacity(0.15),
+                      backgroundColor: color.withAlpha((0.15 * 255).round()),
                       child: Icon(Icons.bar_chart, color: color),
                     ),
                     title: Text(status),
@@ -63,3 +63,4 @@ class _ReportsPageState extends State<ReportsPage> {
     );
   }
 }
+

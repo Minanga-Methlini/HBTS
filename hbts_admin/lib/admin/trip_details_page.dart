@@ -155,7 +155,7 @@ class _TripDetailsPageState extends State<TripDetailsPage>
                         builder: (_) => TripFormPage(trip: _trip),
                       ),
                     );
-                    if (!mounted) return;
+                    if (!context.mounted) return;
                     if (result is Map<String, dynamic>) {
                       _applyTripUpdate(result);
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -192,7 +192,7 @@ class _TripDetailsPageState extends State<TripDetailsPage>
               return ListView.separated(
                 padding: const EdgeInsets.all(16),
                 itemCount: stops.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                separatorBuilder: (context, index) => const SizedBox(height: 12),
                 itemBuilder: (_, index) {
                   final stop = stops[index] as Map<String, dynamic>;
                   final stopId = stop["stop_id"] ?? stop["stopId"] ?? stop["id"];
@@ -246,7 +246,7 @@ class _TripDetailsPageState extends State<TripDetailsPage>
               return ListView.separated(
                 padding: const EdgeInsets.all(16),
                 itemCount: items.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                separatorBuilder: (context, index) => const SizedBox(height: 12),
                 itemBuilder: (_, index) {
                   final item = items[index] as Map<String, dynamic>;
                   final lat =
@@ -354,3 +354,4 @@ String _statusLabel(String value) {
   if (normalized.contains("cancel")) return "cancelled";
   return normalized.isEmpty ? "scheduled" : value;
 }
+

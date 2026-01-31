@@ -19,7 +19,7 @@ class SchedulePage extends StatelessWidget {
                   width: 56,
                   height: 56,
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.12),
+                    color: AppColors.primary.withAlpha((0.12 * 255).round()),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: const Icon(
@@ -42,3 +42,4 @@ class SchedulePage extends StatelessWidget {
     );
   }
 }
+

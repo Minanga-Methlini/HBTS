@@ -148,7 +148,7 @@ class _OperatorList extends StatelessWidget {
     return ListView.separated(
       padding: const EdgeInsets.all(12),
       itemCount: operators.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
+      separatorBuilder: (context, index) => const SizedBox(height: 10),
       itemBuilder: (_, index) {
         final op = operators[index];
         return Card(
@@ -156,7 +156,7 @@ class _OperatorList extends StatelessWidget {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           child: ListTile(
             leading: CircleAvatar(
-              backgroundColor: badgeColor.withOpacity(0.15),
+              backgroundColor: badgeColor.withAlpha((0.15 * 255).round()),
               child: Icon(Icons.apartment, color: badgeColor),
             ),
             title: Text(
@@ -175,7 +175,7 @@ class _OperatorList extends StatelessWidget {
             trailing: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                color: badgeColor.withOpacity(0.1),
+                color: badgeColor.withAlpha((0.1 * 255).round()),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
@@ -192,3 +192,5 @@ class _OperatorList extends StatelessWidget {
     );
   }
 }
+
+

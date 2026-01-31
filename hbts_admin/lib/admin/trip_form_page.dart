@@ -345,6 +345,7 @@ class _TripFormPageState extends State<TripFormPage> {
       lastDate: DateTime(2100, 12, 31),
     );
     if (pickedDate == null) return;
+    if (!mounted) return;
     final pickedTime = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.fromDateTime(initial),
@@ -410,7 +411,7 @@ class _TripFormPageState extends State<TripFormPage> {
                           ),
                         ),
                       DropdownButtonFormField<int>(
-                        value: _selectedRouteId,
+                        initialValue: _selectedRouteId,
                         items: _routes
                             .map(
                               (r) => DropdownMenuItem<int>(
@@ -428,7 +429,7 @@ class _TripFormPageState extends State<TripFormPage> {
                       ),
                       const SizedBox(height: 12),
                       DropdownButtonFormField<int>(
-                        value: _selectedBusId,
+                        initialValue: _selectedBusId,
                         items: _buses
                             .map(
                               (b) => DropdownMenuItem<int>(
@@ -448,7 +449,7 @@ class _TripFormPageState extends State<TripFormPage> {
                       ),
                       const SizedBox(height: 12),
                       DropdownButtonFormField<int>(
-                        value: _selectedDriverId,
+                        initialValue: _selectedDriverId,
                         items: _drivers
                             .map(
                               (d) => DropdownMenuItem<int>(
@@ -526,7 +527,7 @@ class _TripFormPageState extends State<TripFormPage> {
                       ),
                       const SizedBox(height: 12),
                       DropdownButtonFormField<String>(
-                        value: _selectedStatus,
+                        initialValue: _selectedStatus,
                         items: const [
                           DropdownMenuItem(
                             value: "scheduled",

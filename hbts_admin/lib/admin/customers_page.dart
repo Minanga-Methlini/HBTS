@@ -97,7 +97,7 @@ class _CustomersPageState extends State<CustomersPage> {
                 : ListView.separated(
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     itemCount: passengers.length,
-                    separatorBuilder: (_, __) =>
+                    separatorBuilder: (context, index) =>
                         const SizedBox(height: 10),
                     itemBuilder: (context, index) {
                       final p =
@@ -109,7 +109,7 @@ class _CustomersPageState extends State<CustomersPage> {
                         child: ListTile(
                           leading: CircleAvatar(
                             backgroundColor:
-                                AppColors.primary.withOpacity(0.12),
+                                AppColors.primary.withAlpha((0.12 * 255).round()),
                             child: const Icon(
                               Icons.person,
                               color: AppColors.primary,
@@ -143,3 +143,5 @@ class _CustomersPageState extends State<CustomersPage> {
     );
   }
 }
+
+

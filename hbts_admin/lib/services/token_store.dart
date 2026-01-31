@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class TokenStore {
@@ -87,9 +88,9 @@ class TokenStore {
     final refresh = await getRefreshToken();
     final role = await getRole();
 
-    print("🔐 ACCESS TOKEN: ${access != null ? 'EXISTS' : 'NULL'}");
-    print("🔄 REFRESH TOKEN: ${refresh != null ? 'EXISTS' : 'NULL'}");
-    print("👤 ROLE: $role");
+    debugPrint("🔐 ACCESS TOKEN: ${access != null ? 'EXISTS' : 'NULL'}");
+    debugPrint("🔄 REFRESH TOKEN: ${refresh != null ? 'EXISTS' : 'NULL'}");
+    debugPrint("👤 ROLE: $role");
   }
 
   // =======================

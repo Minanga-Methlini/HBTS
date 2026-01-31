@@ -78,9 +78,11 @@ class _DriverReviewFormState extends State<DriverReviewForm> {
         status,
         reason: status == "rejected" ? reasonController.text.trim() : null,
       );
+      if (!mounted) return;
       _showMessage("Driver ${status.toLowerCase()}");
       Navigator.pop(context, true);
     } catch (e) {
+      if (!mounted) return;
       _showMessage(e.toString(), isError: true);
     } finally {
       if (mounted) setState(() => _submitting = false);
@@ -103,9 +105,11 @@ class _DriverReviewFormState extends State<DriverReviewForm> {
         phone: phoneController.text.trim(),
         operatorName: selectedOperator,
       );
+      if (!mounted) return;
       _showMessage("Driver updated");
       Navigator.pop(context, true);
     } catch (e) {
+      if (!mounted) return;
       _showMessage(e.toString(), isError: true);
     } finally {
       if (mounted) setState(() => _submitting = false);
@@ -143,7 +147,7 @@ class _DriverReviewFormState extends State<DriverReviewForm> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.15),
+                  color: statusColor.withAlpha((0.15 * 255).round()),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -167,7 +171,7 @@ class _DriverReviewFormState extends State<DriverReviewForm> {
             const SizedBox(height: 16),
 
             DropdownButtonFormField<String>(
-              value: selectedOperator,
+              initialValue: selectedOperator,
               decoration: const InputDecoration(
                 labelText: 'Bus Operator',
                 border: OutlineInputBorder(),
@@ -273,3 +277,4 @@ class _DriverReviewFormState extends State<DriverReviewForm> {
     );
   }
 }
+

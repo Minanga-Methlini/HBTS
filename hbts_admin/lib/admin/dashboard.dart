@@ -71,14 +71,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
         tripsFuture,
       ]);
 
-      final passengers = results[0] as List<dynamic>;
-      final approvedDrivers = results[1] as List<dynamic>;
-      final pendingDrivers = results[2] as List<dynamic>;
-      final rejectedDrivers = results[3] as List<dynamic>;
-      final buses = results[4] as List<dynamic>;
-      final busOwners = results[5] as List<dynamic>;
-      final routes = results[6] as List<dynamic>;
-      final trips = results[7] as List<dynamic>;
+      final passengers = results[0];
+      final approvedDrivers = results[1];
+      final pendingDrivers = results[2];
+      final rejectedDrivers = results[3];
+      final buses = results[4];
+      final busOwners = results[5];
+      final routes = results[6];
+      final trips = results[7];
 
       final passengerCounts = _countPassengerStatuses(passengers);
       final busSlices = _buildBusSlices(buses);
@@ -404,7 +404,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
             },
             onLogout: () async {
               await TokenStore.clear();
-              if (!mounted) return;
+              if (!context.mounted) return;
               Navigator.pushAndRemoveUntil(
                 context,
                 MaterialPageRoute(builder: (_) => const LoginScreen()),
@@ -808,7 +808,7 @@ class _StatCard extends StatelessWidget {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: data.color.withOpacity(0.12),
+                    color: data.color.withAlpha((0.12 * 255).round()),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(data.icon, color: data.color),
@@ -1396,3 +1396,4 @@ class _InteractiveDonutPainter extends CustomPainter {
     return false;
   }
 }
+

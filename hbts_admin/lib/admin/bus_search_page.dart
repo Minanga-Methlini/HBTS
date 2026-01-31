@@ -241,7 +241,7 @@ class _BusSearchPageState extends State<BusSearchPage> {
                         : ListView.separated(
                             padding: const EdgeInsets.all(12),
                             itemCount: _results.length,
-                            separatorBuilder: (_, __) =>
+                            separatorBuilder: (context, index) =>
                                 const SizedBox(height: 12),
                             itemBuilder: (_, index) =>
                                 BusCard(
@@ -255,3 +255,4 @@ class _BusSearchPageState extends State<BusSearchPage> {
     );
   }
 }
+

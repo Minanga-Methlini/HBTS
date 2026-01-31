@@ -83,8 +83,10 @@ class _DriverListTabState extends State<DriverListTab> {
 
     try {
       final data = await DriverAdminApi.list(status: widget.status);
+      if (!mounted) return;
       setState(() => drivers = data);
     } catch (e) {
+      if (!mounted) return;
       setState(() => error = e.toString());
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.toString())),
@@ -115,7 +117,6 @@ class _DriverListTabState extends State<DriverListTab> {
 
   @override
   Widget build(BuildContext context) {
-    final isPending = widget.status == "pending";
     final statusColor = widget.status == "approved"
         ? AppColors.success
         : widget.status == "pending"
@@ -142,7 +143,7 @@ class _DriverListTabState extends State<DriverListTab> {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(12),
         itemCount: drivers.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 10),
+        separatorBuilder: (context, index) => const SizedBox(height: 10),
         itemBuilder: (context, index) {
           final driver = drivers[index] as Map<String, dynamic>;
           final id = _id(driver);
@@ -200,7 +201,7 @@ class _DriverListTabState extends State<DriverListTab> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.15),
+                  color: statusColor.withAlpha((0.15 * 255).round()),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
@@ -244,3 +245,5 @@ class _DriverListTabState extends State<DriverListTab> {
     );
   }
 }
+
+

@@ -55,7 +55,7 @@ class HomePage extends StatelessWidget {
                       width: 54,
                       height: 54,
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.1),
+                        color: AppColors.primary.withAlpha((0.1 * 255).round()),
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: const Icon(
@@ -81,3 +81,4 @@ class HomePage extends StatelessWidget {
     );
   }
 }
+

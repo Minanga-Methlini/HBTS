@@ -114,7 +114,7 @@ class _DriverDetailsPageState extends State<DriverDetailsPage> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.15),
+                  color: statusColor.withAlpha((0.15 * 255).round()),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -186,7 +186,8 @@ class _DriverDetailsPageState extends State<DriverDetailsPage> {
                       );
                       if (changed == true) {
                         await _load();
-                        if (mounted) Navigator.pop(context, true);
+                        if (!context.mounted) return;
+                        Navigator.pop(context, true);
                       }
                     },
                   ),
@@ -198,3 +199,4 @@ class _DriverDetailsPageState extends State<DriverDetailsPage> {
     );
   }
 }
+

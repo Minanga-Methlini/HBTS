@@ -77,7 +77,7 @@ class _Skyline extends StatelessWidget {
           height: height,
           margin: const EdgeInsets.symmetric(horizontal: 2),
           decoration: BoxDecoration(
-            color: const Color(0xFF7E97FF).withOpacity(0.55),
+            color: const Color(0xFF7E97FF).withAlpha((0.55 * 255).round()),
             borderRadius: BorderRadius.vertical(top: Radius.circular(radius)),
           ),
         ),
@@ -106,3 +106,4 @@ class _Skyline extends StatelessWidget {
     );
   }
 }
+

@@ -26,16 +26,20 @@ class _CustomersDashboardState extends State<CustomersDashboard> {
 
     try {
       final data = await AdminApi.getPassengers(search);
+      if (!mounted) return;
       setState(() {
         _customers = data;
       });
     } catch (e) {
+      if (!mounted) return;
       debugPrint("Customer load error: $e");
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.toString())),
       );
     } finally {
-      setState(() => _loading = false);
+      if (mounted) {
+        setState(() => _loading = false);
+      }
     }
   }
 
@@ -79,7 +83,7 @@ class _CustomersDashboardState extends State<CustomersDashboard> {
                 : ListView.separated(
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     itemCount: _customers.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 10),
+                    separatorBuilder: (context, index) => const SizedBox(height: 10),
                     itemBuilder: (context, index) {
                       final user =
                           _customers[index] as Map<String, dynamic>;
@@ -91,7 +95,7 @@ class _CustomersDashboardState extends State<CustomersDashboard> {
                         child: ListTile(
                           leading: CircleAvatar(
                             backgroundColor:
-                                AppColors.primary.withOpacity(0.12),
+                                AppColors.primary.withAlpha((0.12 * 255).round()),
                             child: const Icon(
                               Icons.person,
                               color: AppColors.primary,
@@ -131,3 +135,5 @@ class _CustomersDashboardState extends State<CustomersDashboard> {
     );
   }
 }
+
+

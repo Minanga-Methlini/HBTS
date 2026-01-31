@@ -89,7 +89,7 @@ class _TripHistoryPageState extends State<TripHistoryPage> {
                       : ListView.separated(
                           padding: const EdgeInsets.all(12),
                           itemCount: _trips.length,
-                          separatorBuilder: (_, __) =>
+                          separatorBuilder: (context, index) =>
                               const SizedBox(height: 12),
                           itemBuilder: (_, index) {
                             return TripCard(
@@ -102,3 +102,4 @@ class _TripHistoryPageState extends State<TripHistoryPage> {
     );
   }
 }
+

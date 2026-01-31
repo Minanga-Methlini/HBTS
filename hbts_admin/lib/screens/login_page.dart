@@ -77,12 +77,12 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       final tempToken = result["tempToken"] as String?;
-    final challengeIdRaw = result["challengeId"];
-final int challengeId = int.parse(challengeIdRaw.toString());
+      final challengeIdRaw = result["challengeId"];
+      final int challengeId = int.parse(challengeIdRaw.toString());
 
       final role = result["role"]; // 🔥 IMPORTANT
 
-      if (tempToken == null || challengeId == null || role == null) {
+      if (tempToken == null || role == null) {
         throw Exception("Invalid response from server");
       }
 
