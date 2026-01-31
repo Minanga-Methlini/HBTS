@@ -99,3 +99,38 @@ export function emitTripStarted({ operatorId, busId, tripId }) {
     } catch {}
   }
 }
+
+export function emitTripEnded({ operatorId, busId, tripId }) {
+  const busKey = `${operatorId}:${busId}`;
+  const set = busRooms.get(busKey);
+  if (!set) return;
+
+  const payload = JSON.stringify({
+    type: "TRIP_ENDED",
+    operatorId,
+    busId,
+    tripId,
+  });
+
+  for (const ws of set) {
+    try { ws.send(payload); } catch {}
+  }
+}
+
+export function emitTripCancelled({ operatorId, busId, tripId }) {
+  const busKey = `${operatorId}:${busId}`;
+  const set = busRooms.get(busKey);
+  if (!set) return;
+
+  const payload = JSON.stringify({
+    type: "TRIP_CANCELLED",
+    operatorId,
+    busId,
+    tripId,
+  });
+
+  for (const ws of set) {
+    try { ws.send(payload); } catch {}
+  }
+}
+

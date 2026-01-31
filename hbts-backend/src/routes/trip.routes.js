@@ -5,7 +5,9 @@ import {
   searchTrips,
   getTripById,
   getTripSeats,
-  startTrip, // ✅ add this
+  startTrip,
+  endTrip,
+  cancelTrip, 
 } from "../controllers/trip.controller.js";
 
 import { requireAuth } from "../middleware/auth.middleware.js"; // ✅ correct file
@@ -22,12 +24,10 @@ router.get("/:id", getTripById);
 // /api/trips/:id/seats
 router.get("/:id/seats", getTripSeats);
 
-// ✅ driver/admin/operator can start trip
-router.post(
-  "/:id/start",
-  requireAuth,
-  requireRole(["driver", "admin", "operator"]),
-  startTrip
-);
+
+router.post("/:id/start", requireAuth, requireRole(["driver", "admin", "operator"]), startTrip);
+router.post("/:id/end", requireAuth, requireRole(["driver", "admin", "operator"]), endTrip);
+router.post("/:id/cancel", requireAuth, requireRole(["driver", "admin", "operator"]), cancelTrip);
+
 
 export default router;

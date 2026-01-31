@@ -1002,50 +1002,70 @@ export async function scanCommit(req, res) {
   }
 }
 
+
 /**
  * GET /api/conductor/me/active-trip
- * Returns today's "active" trip for the conductor's bus.
- * Active statuses: started, ongoing (adjust to your trip_status enum)
+ * Returns the currently running trip for this conductor's bus (if any)
  */
 export async function getMyActiveTrip(req, res) {
   try {
     const userId = req.user.user_id;
 
-    const ctx = await getConductorContext(userId);
-    if (!ctx) return res.status(403).json({ message: "Conductor profile not found or inactive" });
+    // 1️⃣ Get conductor context
+    const ctxQ = await pool.query(
+      `
+      SELECT bus_id, operator_id
+      FROM conductors
+      WHERE user_id = $1 AND is_active = true
+      `,
+      [userId]
+    );
 
-    const { rows } = await pool.query(
+    if (!ctxQ.rows.length) {
+      return res.status(403).json({ message: "Conductor profile not found or inactive" });
+    }
+
+    const { bus_id, operator_id } = ctxQ.rows[0];
+
+    // 2️⃣ Find running trip
+    const tripQ = await pool.query(
       `
       SELECT
         t.trip_id,
-        t.route_id,
-        t.operator_id,
-        t.bus_id,
-        t.driver_id,
         t.trip_date,
         t.departure_time,
         t.arrival_time,
         t.status,
 
         r.route_name,
-        r.start_location,
-        r.end_location
+        r.from_location,
+        r.to_location,
+
+        b.bus_id,
+        b.license_plate_no,
+        b.model
       FROM trips t
       JOIN routes r ON r.route_id = t.route_id
+      JOIN buses b ON b.bus_id = t.bus_id
       WHERE t.bus_id = $1
         AND t.operator_id = $2
+        AND t.status = 'running'::trip_status
         AND t.deleted_at IS NULL
-        AND t.trip_date = CURRENT_DATE
-        AND t.status IN ('started'::trip_status, 'ongoing'::trip_status)
-      ORDER BY t.departure_time DESC
       LIMIT 1
       `,
-      [ctx.bus_id, ctx.operator_id]
+      [bus_id, operator_id]
     );
 
-    return res.json(rows[0] || null);
+    // 3️⃣ No active trip → return null
+    if (!tripQ.rows.length) {
+      return res.json(null);
+    }
+
+    // 4️⃣ Active trip found
+    return res.json(tripQ.rows[0]);
   } catch (e) {
     console.error("getMyActiveTrip error:", e);
     return res.status(500).json({ message: "Server error" });
   }
 }
+

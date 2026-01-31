@@ -9,8 +9,9 @@ import {
   boardBooking,     // ✅ add
   payCashBooking, 
   scanCommit, 
+  getMyActiveTrip,
 } from "../controllers/conductor.controller.js";
-import { getMyActiveTrip } from "../controllers/conductor.controller.js";
+
 
 
 const router = express.Router();
@@ -25,7 +26,14 @@ router.post("/scan/verify", verifyScan);
 router.post("/bookings/:bookingId/board", boardBooking);
 router.post("/bookings/:bookingId/pay-cash", payCashBooking);
 router.post("/scan/commit", scanCommit);
-router.get("/me/active-trip", getMyActiveTrip);
+
+
+router.get(
+  "/me/active-trip",
+  requireAuth,
+  requireRole("conductor"),
+  getMyActiveTrip
+);
 
 
 
