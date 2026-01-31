@@ -718,3 +718,334 @@ export async function payCashBooking(req, res) {
     client.release();
   }
 }
+
+export async function scanCommit(req, res) {
+  const userId = req.user.user_id;
+
+  const qrRaw = (req.body?.qr ?? "").toString();
+  const source = (req.body?.source || "QR").toString(); // QR | MANUAL | OFFLINE_QR
+  const collectCash = !!req.body?.collectCash;
+  const amount = req.body?.amount != null ? Number(req.body.amount) : null;
+
+  const tripIdFromBody = req.body?.tripId != null ? Number(req.body.tripId) : null;
+  const clientActionId = req.body?.clientActionId ? String(req.body.clientActionId) : null;
+
+  const allowedSources = new Set(["QR", "MANUAL", "OFFLINE_QR"]);
+  if (!allowedSources.has(source)) return res.status(400).json({ ok: false, message: "Invalid source" });
+
+  const parsed = parseQr(qrRaw);
+  if (!parsed.ok) return res.status(400).json({ ok: false, message: parsed.error });
+
+  const bookingId = parsed.bookingId;
+  const tripIdHint = parsed.tripId;
+  const tripIdFinalHint = tripIdFromBody ?? tripIdHint ?? null;
+
+  const qrHash = crypto.createHash("sha256").update(qrRaw).digest("hex");
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    // Optional idempotency (offline retries)
+    if (clientActionId) {
+      const seen = await client.query(
+        `SELECT client_action_id, status, result FROM conductor_sync_action WHERE client_action_id = $1`,
+        [clientActionId]
+      );
+      if (seen.rows.length) {
+        await client.query("COMMIT");
+        return res.json({ ok: true, idempotent: true, clientActionId, previous: seen.rows[0] });
+      }
+    }
+
+    // Lock booking row (single source of truth)
+    const { b } = await mustGetBookingForConductor(client, {
+      bookingId,
+      userId,
+      tripIdHint: tripIdFinalHint,
+      lock: true,
+    });
+
+    // Block invalid booking statuses
+    const invalidStatuses = new Set(["cancelled", "expired"]);
+    if (invalidStatuses.has(String(b.booking_status))) {
+      await logAction(client, {
+        tripId: b.trip_id,
+        bookingId: b.booking_id,
+        userId,
+        type: "QR_VERIFY",
+        meta: { ok: false, reason: "BOOKING_INVALID_STATUS", booking_status: b.booking_status, qrHash },
+      });
+      await client.query("COMMIT");
+      return res.status(400).json({ ok: false, message: `Booking is ${b.booking_status}` });
+    }
+
+    // ----------------------------
+    // Decide payment state
+    // ----------------------------
+    const paymentStatus =
+      b.payment_status ?? (String(b.paid_via) === "cash" ? "pending" : "paid");
+
+    const alreadyPaid = paymentStatus === "paid" || !!b.payment_ref;
+    const cashPending = String(b.paid_via) === "cash" && paymentStatus === "pending";
+
+    // ----------------------------
+    // Decide boarding state
+    // ----------------------------
+    const alreadyBoarded = !!b.boarded_at;
+
+    // Mark scan markers (idempotent)
+    await client.query(
+      `
+      UPDATE bookings
+      SET
+        qr_scanned_at = COALESCE(qr_scanned_at, CURRENT_TIMESTAMP),
+        last_scanned_by = $2
+      WHERE booking_id = $1
+      `,
+      [b.booking_id, userId]
+    );
+
+    // Always log the scan
+    await logAction(client, {
+      tripId: b.trip_id,
+      bookingId: b.booking_id,
+      userId,
+      type: alreadyBoarded ? "DUPLICATE_SCAN" : "QR_VERIFY",
+      meta: { ok: true, qrHash, format: parsed.format, alreadyBoarded },
+    });
+
+    // ----------------------------
+    // If cash pending and caller wants to collect cash → mark paid
+    // ----------------------------
+    let cashPaid = false;
+
+    if (cashPending) {
+      if (!collectCash) {
+        // Caller didn't request payment, so keep pending and return
+        await client.query("COMMIT");
+        return res.status(409).json({
+          ok: false,
+          message: "Cash payment pending",
+          booking_id: b.booking_id,
+          trip_id: b.trip_id,
+          flags: { cashPending: true, alreadyPaid: false, alreadyBoarded },
+        });
+      }
+
+      // apply payment (only if not already paid)
+      const payUpd = await client.query(
+        `
+        UPDATE bookings
+        SET
+          payment_status = 'paid'::payment_status,
+          paid_at = CURRENT_TIMESTAMP,
+          paid_by = $2
+        WHERE booking_id = $1
+          AND paid_via = 'cash'::payment_method
+          AND COALESCE(payment_status, 'pending'::payment_status) = 'pending'::payment_status
+        RETURNING booking_id, payment_status, paid_at, paid_by
+        `,
+        [b.booking_id, userId]
+      );
+
+      if (payUpd.rows.length) {
+        cashPaid = true;
+        await logAction(client, {
+          tripId: b.trip_id,
+          bookingId: b.booking_id,
+          userId,
+          type: "PAY_CASH",
+          meta: { ok: true, amount, idempotent: false },
+        });
+      } else {
+        // someone else might have paid concurrently
+        cashPaid = true;
+        await logAction(client, {
+          tripId: b.trip_id,
+          bookingId: b.booking_id,
+          userId,
+          type: "PAY_CASH",
+          meta: { ok: true, amount, idempotent: true, note: "Already paid by another action" },
+        });
+      }
+    }
+
+    // ----------------------------
+    // Board passenger (idempotent)
+    // ----------------------------
+    let boarded = false;
+
+    if (!alreadyBoarded) {
+      const boardUpd = await client.query(
+        `
+        UPDATE bookings
+        SET
+          boarded_at = CURRENT_TIMESTAMP,
+          boarded_by = $2,
+          verification_source = $3::verification_source,
+          qr_scanned_at = COALESCE(qr_scanned_at, CURRENT_TIMESTAMP),
+          last_scanned_by = $2
+        WHERE booking_id = $1
+          AND boarded_at IS NULL
+        RETURNING booking_id, trip_id, boarded_at, boarded_by, verification_source
+        `,
+        [b.booking_id, userId, source]
+      );
+
+      if (boardUpd.rows.length) {
+        boarded = true;
+        await logAction(client, {
+          tripId: b.trip_id,
+          bookingId: b.booking_id,
+          userId,
+          type: "BOARD",
+          meta: { ok: true, source, idempotent: false },
+        });
+      } else {
+        // concurrent board
+        boarded = true;
+        await logAction(client, {
+          tripId: b.trip_id,
+          bookingId: b.booking_id,
+          userId,
+          type: "BOARD",
+          meta: { ok: true, source, idempotent: true, note: "Already boarded by another action" },
+        });
+      }
+    }
+
+    // Prepare final booking state (fresh read)
+    const finalQ = await client.query(
+      `
+      SELECT
+        b.booking_id,
+        b.trip_id,
+        b.seat_id,
+        s.seat_label AS seat_number,
+
+        b.boarding_stop_id,
+        bs.stop_name AS boarding_stop_name,
+
+        b.dropping_stop_id,
+        ds.stop_name AS dropping_stop_name,
+
+        b.price,
+        b.status AS booking_status,
+
+        b.paid_via,
+        b.payment_status,
+        b.payment_ref,
+        b.paid_at,
+        b.paid_by,
+
+        b.boarded_at,
+        b.boarded_by,
+
+        b.qr_scanned_at,
+        b.last_scanned_by,
+        b.verification_source
+      FROM bookings b
+      JOIN seats s ON s.seat_id = b.seat_id
+      JOIN stops bs ON bs.stop_id = b.boarding_stop_id
+      JOIN stops ds ON ds.stop_id = b.dropping_stop_id
+      WHERE b.booking_id = $1
+      `,
+      [b.booking_id]
+    );
+
+    const finalBooking = finalQ.rows[0];
+
+    // Record idempotency result if clientActionId provided
+    if (clientActionId) {
+      await client.query(
+        `
+        INSERT INTO conductor_sync_action (client_action_id, trip_id, booking_id, conductor_user_id, action_type, status, result)
+        VALUES ($1, $2, $3, $4, 'SCAN_COMMIT'::conductor_log_type, 'applied', $5::jsonb)
+        `,
+        [
+          clientActionId,
+          b.trip_id,
+          b.booking_id,
+          userId,
+          JSON.stringify({
+            ok: true,
+            actions: { verified: true, cashPaid: cashPaid || false, boarded: boarded || alreadyBoarded },
+            booking_id: b.booking_id,
+            trip_id: b.trip_id,
+          }),
+        ]
+      );
+    }
+
+    await client.query("COMMIT");
+
+    return res.json({
+      ok: true,
+      booking: finalBooking,
+      actions: {
+        verified: true,
+        cashPaid: cashPaid,
+        boarded: boarded || alreadyBoarded,
+      },
+      flags: {
+        alreadyPaid: alreadyPaid || cashPaid,
+        cashPending: false,
+      },
+    });
+  } catch (e) {
+    await client.query("ROLLBACK");
+    console.error("scanCommit error:", e);
+    return res.status(e.status || 500).json({ ok: false, message: e.message || "Server error" });
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * GET /api/conductor/me/active-trip
+ * Returns today's "active" trip for the conductor's bus.
+ * Active statuses: started, ongoing (adjust to your trip_status enum)
+ */
+export async function getMyActiveTrip(req, res) {
+  try {
+    const userId = req.user.user_id;
+
+    const ctx = await getConductorContext(userId);
+    if (!ctx) return res.status(403).json({ message: "Conductor profile not found or inactive" });
+
+    const { rows } = await pool.query(
+      `
+      SELECT
+        t.trip_id,
+        t.route_id,
+        t.operator_id,
+        t.bus_id,
+        t.driver_id,
+        t.trip_date,
+        t.departure_time,
+        t.arrival_time,
+        t.status,
+
+        r.route_name,
+        r.start_location,
+        r.end_location
+      FROM trips t
+      JOIN routes r ON r.route_id = t.route_id
+      WHERE t.bus_id = $1
+        AND t.operator_id = $2
+        AND t.deleted_at IS NULL
+        AND t.trip_date = CURRENT_DATE
+        AND t.status IN ('started'::trip_status, 'ongoing'::trip_status)
+      ORDER BY t.departure_time DESC
+      LIMIT 1
+      `,
+      [ctx.bus_id, ctx.operator_id]
+    );
+
+    return res.json(rows[0] || null);
+  } catch (e) {
+    console.error("getMyActiveTrip error:", e);
+    return res.status(500).json({ message: "Server error" });
+  }
+}

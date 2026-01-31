@@ -1,6 +1,8 @@
 // src/controllers/trip.controller.js
 import { pool } from "../db.js";
 import { expirePendingBookingsOnce } from "../jobs/expirePendingBookings.job.js";
+import { emitTripStarted } from "../ws/realtime.ws.js";
+
 
 const TTL_MINUTES = Number(process.env.PENDING_TTL_MINUTES || 10);
 
@@ -141,5 +143,89 @@ export async function getTripSeats(req, res) {
   } catch (err) {
     console.error("getTripSeats error:", err);
     return res.status(500).json({ message: "Server error" });
+  }
+}
+
+export async function startTrip(req, res) {
+  const tripId = Number(req.params.id);
+  if (!Number.isFinite(tripId)) {
+    return res.status(400).json({ message: "Invalid trip id" });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    // Lock the trip row so 2 starts can't race
+    const q = await client.query(
+      `
+      SELECT trip_id, operator_id, bus_id, status, deleted_at
+      FROM trips
+      WHERE trip_id = $1
+      FOR UPDATE
+      `,
+      [tripId]
+    );
+
+    if (!q.rows.length) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ message: "Trip not found" });
+    }
+
+    const t = q.rows[0];
+
+    if (t.deleted_at) {
+      await client.query("ROLLBACK");
+      return res.status(400).json({ message: "Trip is deleted" });
+    }
+
+    // ✅ Adjust these values to match your trip_status enum
+    const alreadyActive = ["started", "ongoing"].includes(String(t.status));
+    if (alreadyActive) {
+      // idempotent success — still emit? Usually NO (avoid spam)
+      await client.query("COMMIT");
+      return res.json({
+        ok: true,
+        idempotent: true,
+        trip_id: t.trip_id,
+        status: t.status,
+      });
+    }
+
+    // Optional: only scheduled can start (depends on your rules)
+    if (String(t.status) !== "scheduled") {
+      await client.query("ROLLBACK");
+      return res.status(400).json({ message: `Trip cannot be started from status ${t.status}` });
+    }
+
+    const upd = await client.query(
+      `
+      UPDATE trips
+      SET status = 'running'::trip_status,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE trip_id = $1
+      RETURNING trip_id, operator_id, bus_id, status
+      `,
+      [tripId]
+    );
+
+    const startedTrip = upd.rows[0];
+
+    await client.query("COMMIT");
+
+    // ✅ Emit AFTER commit so clients don’t see a trip that isn't committed yet
+    emitTripStarted({
+      operatorId: startedTrip.operator_id,
+      busId: startedTrip.bus_id,
+      tripId: startedTrip.trip_id,
+    });
+
+    return res.json({ ok: true, idempotent: false, trip: startedTrip });
+  } catch (err) {
+    await client.query("ROLLBACK");
+    console.error("startTrip error:", err);
+    return res.status(500).json({ message: "Server error" });
+  } finally {
+    client.release();
   }
 }

@@ -23,6 +23,8 @@ import notificationRoutes from "./routes/notification.routes.js";
 import conductorRoutes from "./routes/conductor.routes.js";
 
 import { initNotificationWS } from "./ws/notification.ws.js";
+import { initRealtimeWS } from "./ws/realtime.ws.js";
+
 
 const app = express();
 
@@ -55,18 +57,39 @@ const PORT = process.env.PORT || 4000;
 // ✅ Create HTTP server
 const server = http.createServer(app);
 
-// ✅ Attach WebSocket server on a dedicated path
-export const wss = new WebSocketServer({
-  server,
-  path: "/ws/notifications",
-});
+// ✅ Create WebSocket servers in noServer mode
+export const notificationsWss = new WebSocketServer({ noServer: true });
+export const realtimeWss = new WebSocketServer({ noServer: true });
 
-// ✅ Attach JWT auth + user-client registry
-initNotificationWS(wss);
+// ✅ Init handlers
+initNotificationWS(notificationsWss);
+initRealtimeWS(realtimeWss);
+
+// ✅ Route WS upgrades manually (reliable with multiple WS paths)
+server.on("upgrade", (req, socket, head) => {
+  try {
+    const { pathname } = new URL(req.url, `http://${req.headers.host}`);
+
+    if (pathname === "/ws/notifications") {
+      notificationsWss.handleUpgrade(req, socket, head, (ws) => {
+        notificationsWss.emit("connection", ws, req);
+      });
+      return;
+    }
+
+    if (pathname === "/ws/realtime") {
+      realtimeWss.handleUpgrade(req, socket, head, (ws) => {
+        realtimeWss.emit("connection", ws, req);
+      });
+      return;
+    }
+
+    socket.destroy();
+  } catch (e) {
+    socket.destroy();
+  }
+});
 
 server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
-
-console.log("BOOT: starting expirePendingBookings job");
-startExpirePendingBookingsJob();
