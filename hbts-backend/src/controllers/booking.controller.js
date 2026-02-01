@@ -557,5 +557,3 @@ export async function getBookingTracking(req, res) {
 }
 
 
-=======
->>>>>>> d7249bdd1a77b7faee6d01ff9d46dbdf7ba288de

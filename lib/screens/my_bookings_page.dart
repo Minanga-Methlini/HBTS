@@ -6,14 +6,6 @@ import 'booking_details_page.dart';
 enum BookingStatusUI { scheduled, cancelled, onboard, completed }
 
 BookingStatusUI mapUiStatus(MyBookingItem b) {
-<<<<<<< HEAD
-  final trip = b.tripStatus.toLowerCase();
-  final st = b.status.toLowerCase();
-
-  if (trip == "cancelled" || st == "cancelled") return BookingStatusUI.cancelled;
-  if (trip == "completed") return BookingStatusUI.completed;
-  if (trip == "running" || trip == "started") return BookingStatusUI.onboard;
-=======
   final trip = b.tripStatus.toLowerCase().trim();
   final st = b.status.toLowerCase().trim();
 
@@ -33,7 +25,6 @@ BookingStatusUI mapUiStatus(MyBookingItem b) {
     }
     return BookingStatusUI.onboard;
   }
->>>>>>> d7249bdd1a77b7faee6d01ff9d46dbdf7ba288de
 
   return BookingStatusUI.scheduled;
 }
@@ -111,8 +102,6 @@ class _PassengerBookingsPageState extends State<PassengerBookingsPage> {
                       _BookingsList(items: history, onRefresh: _load),
                     ],
                   ),
-<<<<<<< HEAD
-=======
       ),
     );
   }
@@ -237,7 +226,6 @@ class _BookingCard extends StatelessWidget {
             _StatusBadge(status: uiStatus),
           ],
         ),
->>>>>>> d7249bdd1a77b7faee6d01ff9d46dbdf7ba288de
       ),
     );
   }
@@ -251,43 +239,6 @@ class _BookingCard extends StatelessWidget {
   }
 }
 
-<<<<<<< HEAD
-class _BookingsList extends StatelessWidget {
-  final List<MyBookingItem> items;
-  final Future<void> Function() onRefresh;
-
-  const _BookingsList({required this.items, required this.onRefresh});
-
-  @override
-  Widget build(BuildContext context) {
-    return RefreshIndicator(
-      onRefresh: onRefresh,
-      child: items.isEmpty
-          ? ListView(
-              children: const [
-                SizedBox(height: 140),
-                Center(child: Text("No bookings found")),
-              ],
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.all(12),
-              itemCount: items.length,
-              itemBuilder: (_, i) {
-                final b = items[i];
-                return _BookingCard(
-                  item: b,
-                  onTap: () async {
-                    // refresh when coming back (seat changed / cancelled)
-                    await Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => BookingDetailsPage(item: b)),
-                    );
-                    await onRefresh();
-                  },
-                );
-              },
-            ),
-=======
 class _MiniPill extends StatelessWidget {
   final String text;
   const _MiniPill({required this.text});
@@ -303,12 +254,10 @@ class _MiniPill extends StatelessWidget {
         border: Border.all(color: theme.dividerColor.withOpacity(0.35)),
       ),
       child: Text(text, style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700)),
->>>>>>> d7249bdd1a77b7faee6d01ff9d46dbdf7ba288de
     );
   }
 }
 
-<<<<<<< HEAD
 class _BookingCard extends StatelessWidget {
   final MyBookingItem item;
   final VoidCallback onTap;
@@ -365,9 +314,6 @@ class _BookingCard extends StatelessWidget {
   }
 }
 
-=======
-
->>>>>>> d7249bdd1a77b7faee6d01ff9d46dbdf7ba288de
 class _StatusBadge extends StatelessWidget {
   final BookingStatusUI status;
   const _StatusBadge({required this.status});

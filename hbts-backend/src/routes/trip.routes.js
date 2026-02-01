@@ -20,10 +20,7 @@ import {
 
 import { requireAuth } from "../middleware/auth.middleware.js"; // ✅ correct file
 import { requireRole } from "../middleware/requireRole.js";      // ✅ correct file
-  pushTripLocation,
-} from "../controllers/trip.controller.js";
 
->>>>>>> d7249bdd1a77b7faee6d01ff9d46dbdf7ba288de
 import { requireAuth } from "../middleware/auth.middleware.js";
 
 const router = Router();

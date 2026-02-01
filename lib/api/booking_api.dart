@@ -64,8 +64,6 @@ class BookingApi {
         .toList();
   }
 
-<<<<<<< HEAD
-=======
   static Future<Map<String, dynamic>> getBookingTracking(int bookingId) async {
   final token = await TokenStore.getAccessToken();
   if (token == null || token.isEmpty) {
@@ -86,7 +84,6 @@ class BookingApi {
 }
 
 
->>>>>>> d7249bdd1a77b7faee6d01ff9d46dbdf7ba288de
   static Future<void> changeSeat({
     required int bookingId,
     required int seatId,

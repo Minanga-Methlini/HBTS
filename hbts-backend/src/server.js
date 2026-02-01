@@ -58,13 +58,8 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/trips", tripRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/notifications", notificationRoutes);
-<<<<<<< HEAD
-app.use("/api/routes", routeRoutes);
-
-=======
 app.use("/api/conductor", conductorRoutes);
 app.use("/api/routes", routeRoutes);
->>>>>>> d7249bdd1a77b7faee6d01ff9d46dbdf7ba288de
 
 app.get("/health", (req, res) => res.json({ ok: true }));
 app.get("/", (req, res) => res.send("HBTS Backend is running 🚀"));
@@ -75,14 +70,6 @@ const PORT = process.env.PORT || 4000;
 const server = http.createServer(app);
 
 // ✅ WS servers (manual upgrade routing - reliable for multiple WS paths)
-<<<<<<< HEAD
-export const notificationWss = new WebSocketServer({ noServer: true });
-export const trackingWss = new WebSocketServer({ noServer: true });
-
-// ✅ Attach handlers
-initNotificationWS(notificationWss);
-initTrackingWS(trackingWss);
-=======
 export const notificationsWss = new WebSocketServer({ noServer: true });
 export const realtimeWss = new WebSocketServer({ noServer: true });
 export const trackingWss = new WebSocketServer({ noServer: true }); // optional but safe to keep
@@ -91,19 +78,10 @@ export const trackingWss = new WebSocketServer({ noServer: true }); // optional 
 initNotificationWS(notificationsWss);
 initRealtimeWS(realtimeWss);
 initTrackingWS(trackingWss); // if tracking.ws.js exists; otherwise remove this line + import
->>>>>>> d7249bdd1a77b7faee6d01ff9d46dbdf7ba288de
 
 // ✅ Route WS upgrades by path
 server.on("upgrade", (req, socket, head) => {
   try {
-<<<<<<< HEAD
-    const url = new URL(req.url, "http://localhost");
-    const pathname = url.pathname;
-
-    if (pathname === "/ws/notifications") {
-      notificationWss.handleUpgrade(req, socket, head, (ws) => {
-        notificationWss.emit("connection", ws, req);
-=======
     const { pathname } = new URL(req.url, `http://${req.headers.host}`);
 
     if (pathname === "/ws/notifications") {
@@ -116,7 +94,6 @@ server.on("upgrade", (req, socket, head) => {
     if (pathname === "/ws/realtime") {
       realtimeWss.handleUpgrade(req, socket, head, (ws) => {
         realtimeWss.emit("connection", ws, req);
->>>>>>> d7249bdd1a77b7faee6d01ff9d46dbdf7ba288de
       });
       return;
     }

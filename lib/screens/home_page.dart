@@ -7,12 +7,9 @@ import '../models/user_model.dart';
 import '../app_routes.dart';
 import 'notifications_page.dart';
 import '../state/notification_store.dart';
-<<<<<<< HEAD
-=======
 import '../api/booking_api.dart';
 import '../models/my_booking_item.dart';
 import 'booking_details_page.dart';
->>>>>>> d7249bdd1a77b7faee6d01ff9d46dbdf7ba288de
 import 'track_my_booking_list_page.dart';
 
 
@@ -28,11 +25,8 @@ class _HomePageState extends State<HomePage> {
   AppUser? _user;
 
   int _navIndex = 0;
-<<<<<<< HEAD
-=======
   UpcomingTripUiModel? _upcomingTrip;
   MyBookingItem? _upcomingBooking;
->>>>>>> d7249bdd1a77b7faee6d01ff9d46dbdf7ba288de
 
   @override
   void initState() {
@@ -157,27 +151,13 @@ class _HomePageState extends State<HomePage> {
 
   // This should become your "Upcoming Schedules (today)" page later.
   // For now it can go to myBookings so you don't break anything.
-<<<<<<< HEAD
-  void _goUpcomingSchedules() => Navigator.pushNamed(context, AppRoutes.myBookings);
-
-  void _goTrackBooking() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const TrackMyBookingListPage()),
-    );
-  }
-=======
   void _goUpcomingSchedules() => Navigator.pushNamed(context, AppRoutes.upcomingToday);
 
   void _goTrackBooking() => Navigator.pushNamed(context, AppRoutes.trackMyBooking);
->>>>>>> d7249bdd1a77b7faee6d01ff9d46dbdf7ba288de
   void _goTrackBus() => Navigator.pushNamed(context, AppRoutes.trackBus);
 
   // Nearest trip card → booking details
   // Wire args later using your existing logic/models.
-<<<<<<< HEAD
-  void _goNearestTripDetails() => Navigator.pushNamed(context, AppRoutes.myBookings);
-=======
   void _goNearestTripDetails() {
     final b = _upcomingBooking;
     if (b == null) return;
@@ -186,7 +166,6 @@ class _HomePageState extends State<HomePage> {
       MaterialPageRoute(builder: (_) => BookingDetailsPage(item: b)),
     );
   }
->>>>>>> d7249bdd1a77b7faee6d01ff9d46dbdf7ba288de
 
   void _onBottomNavTap(int index) {
     setState(() => _navIndex = index);
@@ -263,12 +242,7 @@ class _HomePageState extends State<HomePage> {
     final user = _user!;
     final hasPhoto = user.profileImage != null && user.profileImage!.trim().isNotEmpty;
 
-<<<<<<< HEAD
-    // Placeholder: later wire to real "nearest upcoming trip"
-    final UpcomingTripUiModel? upcomingTrip = null;
-=======
     final UpcomingTripUiModel? upcomingTrip = _upcomingTrip;
->>>>>>> d7249bdd1a77b7faee6d01ff9d46dbdf7ba288de
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7FAFF),
@@ -483,10 +457,7 @@ class _HomeBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-<<<<<<< HEAD
-=======
     debugPrint("HOME BODY upcomingTrip = ${upcomingTrip == null ? 'NULL' : 'HAS DATA'}");
->>>>>>> d7249bdd1a77b7faee6d01ff9d46dbdf7ba288de
     final blue = Colors.blue.shade700;
 
     return ListView(
@@ -527,17 +498,11 @@ class _HomeBody extends StatelessWidget {
         if (upcomingTrip != null) ...[
           _UpcomingTripCard(trip: upcomingTrip!, onTap: onUpcomingTripTap),
           const SizedBox(height: 14),
-<<<<<<< HEAD
-        ],
-
-        const SizedBox(height: 14),
-=======
         ] else ...[
           _EmptyUpcomingCard(onTapReserve: onSearch),
           const SizedBox(height: 14),
         ],
 
->>>>>>> d7249bdd1a77b7faee6d01ff9d46dbdf7ba288de
 
         // 2) Search card
         Container(
