@@ -122,5 +122,4 @@ class TokenStore {
     await _storage.delete(key: _refreshTokenKey);
     await _storage.delete(key: _roleKey);
   }
-
 }

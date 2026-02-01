@@ -2,6 +2,7 @@
 import { pool } from "../db.js";
 import { expirePendingBookingsOnce } from "../jobs/expirePendingBookings.job.js";
 import { emitTripStarted } from "../ws/realtime.ws.js";
+import { broadcastTripLocation } from "../ws/tracking.ws.js";
 
 
 const TTL_MINUTES = Number(process.env.PENDING_TTL_MINUTES || 10);

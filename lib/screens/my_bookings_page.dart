@@ -29,8 +29,6 @@ BookingStatusUI mapUiStatus(MyBookingItem b) {
   return BookingStatusUI.scheduled;
 }
 
-
-
 class PassengerBookingsPage extends StatefulWidget {
   const PassengerBookingsPage({super.key});
 

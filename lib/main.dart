@@ -38,6 +38,8 @@ void main() {
           dispose: (_, ws) => ws.dispose(),
         ),
       ],
+    ChangeNotifierProvider(
+      create: (_) => NotificationStore()..refresh(),
       child: const HBTSApp(),
     ),
   );
