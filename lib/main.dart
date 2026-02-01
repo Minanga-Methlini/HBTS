@@ -7,12 +7,37 @@ import 'auth/auth_gate.dart';
 import 'state/notification_store.dart';
 import 'widgets/in_app_notification_banner.dart';
 
+import 'state/conductor_store.dart';
+import 'state/active_trip_store.dart';
+import 'services/realtime_ws.dart';
+import 'services/token_store.dart';
+
+
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() {
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => NotificationStore()..refresh(),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(
+          create: (_) => NotificationStore()..refresh(),
+        ),
+
+        // ✅ NEW: Conductor Home state
+        ChangeNotifierProvider(
+          create: (_) => ConductorStore(),
+        ),
+
+        // ✅ NEW: Active Trip state (bookings, filters, counters)
+        ChangeNotifierProvider(
+          create: (_) => ActiveTripStore(),
+        ),
+
+        Provider(
+          create: (_) => RealtimeWsService(),
+          dispose: (_, ws) => ws.dispose(),
+        ),
+      ],
       child: const HBTSApp(),
     ),
   );
@@ -35,7 +60,7 @@ class _HBTSAppState extends State<HBTSApp> {
     if (_wired) return;
     _wired = true;
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       final store = context.read<NotificationStore>();
 
       // ✅ start websocket realtime after first frame
@@ -54,6 +79,32 @@ class _HBTSAppState extends State<HBTSApp> {
           onTap: () => Navigator.pushNamed(ctx, AppRoutes.notifications),
         );
       });
+
+      final ws = context.read<RealtimeWsService>();
+      final activeTripStore = context.read<ActiveTripStore>();
+
+      final role = await TokenStore.getRole();
+      if (role == "conductor") {
+        await ws.connect();
+
+        ws.events.listen((ev) async {
+          if (ev.isTripStarted) {
+            // refresh so active trip card appears + bookings load
+            await activeTripStore.loadActiveTripAndBookings();
+            return;
+          }
+
+          if (ev.isTripEnded) {
+            activeTripStore.requestTripClosedDialog(reason: "ended");
+            return;
+          }
+
+          if (ev.isTripCancelled) {
+            activeTripStore.requestTripClosedDialog(reason: "cancelled");
+            return;
+          }
+        });
+      }
     });
   }
 

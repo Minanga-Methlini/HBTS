@@ -80,6 +80,8 @@ async function mustGetBookingForConductor(client, { bookingId, userId, tripIdHin
       b.booking_id,
       b.trip_id,
       b.user_id,
+      u.name AS passenger_name,
+      u.phone AS passenger_phone,
       b.seat_id,
       s.seat_label AS seat_number,
 
@@ -114,6 +116,7 @@ async function mustGetBookingForConductor(client, { bookingId, userId, tripIdHin
       t.deleted_at
     FROM bookings b
     JOIN trips t ON t.trip_id = b.trip_id
+    JOIN users u ON u.user_id = b.user_id
     JOIN seats s ON s.seat_id = b.seat_id
     JOIN stops bs ON bs.stop_id = b.boarding_stop_id
     JOIN stops ds ON ds.stop_id = b.dropping_stop_id
@@ -228,8 +231,8 @@ export async function getMyTrips(req, res) {
         t.status,
 
         r.route_name,
-        r.start_location,
-        r.end_location
+        r.from_location,
+        r.to_location
       FROM trips t
       JOIN routes r ON r.route_id = t.route_id
       WHERE t.bus_id = $1
@@ -330,6 +333,8 @@ export async function getTripBookings(req, res) {
         b.booking_id,
         b.trip_id,
         b.user_id,
+        u.name AS passenger_name,
+        u.phone AS passenger_phone,
         b.seat_id,
         s.seat_label AS seat_number,
 
@@ -355,6 +360,7 @@ export async function getTripBookings(req, res) {
 
       FROM bookings b
       JOIN trips t ON t.trip_id = b.trip_id
+      JOIN users u ON u.user_id = b.user_id
       JOIN seats s ON s.seat_id = b.seat_id
       JOIN stops bs ON bs.stop_id = b.boarding_stop_id
       JOIN stops ds ON ds.stop_id = b.dropping_stop_id

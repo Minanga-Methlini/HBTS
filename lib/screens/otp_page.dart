@@ -104,22 +104,30 @@ class _OtpScreenState extends State<OtpScreen> {
       // =======================
       // ROLE-BASED NAVIGATION
       // =======================
-      final isStaff = role == "admin" || role == "operator" || role == "driver";
-
-      if (isStaff) {
-        // For now, all staff go to AdminDashboard.
-        // Later you can route operator/driver to their dashboards.
-        Navigator.pushAndRemoveUntil(
+      if (role == "conductor") {
+        Navigator.pushNamedAndRemoveUntil(
           context,
-          MaterialPageRoute(builder: (_) => const AdminDashboard()),
+          AppRoutes.conductorHome,
           (_) => false,
         );
       } else {
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          AppRoutes.home,
-          (_) => false,
-        );
+        final isStaff = role == "admin" || role == "operator" || role == "driver";
+
+        if (isStaff) {
+          // For now, all staff go to AdminDashboard.
+          // Later you can route operator/driver to their dashboards.
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (_) => const AdminDashboard()),
+            (_) => false,
+          );
+        } else {
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            AppRoutes.home,
+            (_) => false,
+          );
+        }
       }
     } catch (e) {
       if (!mounted) return;

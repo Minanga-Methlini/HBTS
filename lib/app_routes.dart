@@ -18,6 +18,15 @@ import 'screens/booking_success_page.dart';
 import 'admin/dashboard.dart';
 import 'screens/upcoming_today_page.dart';
 
+import 'conductor/conductor_home_page.dart';
+import 'conductor/conductor_active_trip_page.dart';
+import 'conductor/conductor_shell.dart';
+import 'conductor/scan_qr_page.dart';
+import 'conductor/conductor_booking_details_page.dart';
+import 'conductor/conductor_bookings_page.dart';
+
+
+
 
 class AppRoutes {
   static const login = '/login';
@@ -37,6 +46,14 @@ class AppRoutes {
   static const bookingSuccess = '/booking-success';
 
   static const adminHome = '/admin/dashboard';
+
+  static const conductorHome = '/conductor/home';
+  static const conductorActiveTrip = '/conductor/active-trip';
+  static const conductorScan = '/conductor/scan';
+  static const conductorBookings = '/conductor/bookings';
+  static const conductorBookingDetails = '/conductor/booking-details';
+
+
 
   static Route<dynamic> onGenerate(RouteSettings settings) {
     switch (settings.name) {
@@ -104,9 +121,33 @@ class AppRoutes {
         }
         return _badRoute("BookingSuccess args missing");
 
+      case AppRoutes.conductorHome:
+        return MaterialPageRoute(builder: (_) => const ConductorShell());
+
+      case AppRoutes.conductorActiveTrip:
+        return MaterialPageRoute(builder: (_) => const ConductorActiveTripPage());
+
+      case AppRoutes.conductorScan:
+        return MaterialPageRoute(builder: (_) => const ConductorScanPage());
+
+      case AppRoutes.conductorBookings:
+      final args = settings.arguments as Map<String, dynamic>? ?? {};
+      final tripId = args["tripId"] as int?;
+      if (tripId == null) return _badRoute("tripId missing");
+      return MaterialPageRoute(builder: (_) => ConductorBookingsPage(tripId: tripId));
+
+      case AppRoutes.conductorBookingDetails:
+        final args = settings.arguments as Map<String, dynamic>? ?? {};
+        final booking = args["booking"];
+        if (booking == null) return _badRoute("booking missing");
+        return MaterialPageRoute(builder: (_) => ConductorBookingDetailsPage(booking: booking));
+
+  
+
       // ✅ default MUST be last
       default:
         return _badRoute("Route not found: ${settings.name}");
+
     }
   }
 
