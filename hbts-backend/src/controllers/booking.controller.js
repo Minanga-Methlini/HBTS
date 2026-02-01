@@ -507,6 +507,7 @@ export async function cancelBooking(req, res) {
   }
 }
 
+<<<<<<< HEAD
 export async function getBookingTracking(req, res) {
   try {
     const userId = req.user?.id;
@@ -556,3 +557,5 @@ export async function getBookingTracking(req, res) {
 }
 
 
+=======
+>>>>>>> d7249bdd1a77b7faee6d01ff9d46dbdf7ba288de

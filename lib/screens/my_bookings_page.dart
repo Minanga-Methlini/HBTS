@@ -6,12 +6,34 @@ import 'booking_details_page.dart';
 enum BookingStatusUI { scheduled, cancelled, onboard, completed }
 
 BookingStatusUI mapUiStatus(MyBookingItem b) {
+<<<<<<< HEAD
   final trip = b.tripStatus.toLowerCase();
   final st = b.status.toLowerCase();
 
   if (trip == "cancelled" || st == "cancelled") return BookingStatusUI.cancelled;
   if (trip == "completed") return BookingStatusUI.completed;
   if (trip == "running" || trip == "started") return BookingStatusUI.onboard;
+=======
+  final trip = b.tripStatus.toLowerCase().trim();
+  final st = b.status.toLowerCase().trim();
+
+  if (trip == "cancelled" || st == "cancelled") {
+    return BookingStatusUI.cancelled;
+  }
+
+  if (trip == "completed") {
+    return BookingStatusUI.completed;
+  }
+
+  // If passenger-side stale → show as completed
+  if ((trip == "running" || trip == "started")) {
+    final staleAt = b.arrivalTime.add(const Duration(hours: 24));
+    if (DateTime.now().isAfter(staleAt)) {
+      return BookingStatusUI.completed;
+    }
+    return BookingStatusUI.onboard;
+  }
+>>>>>>> d7249bdd1a77b7faee6d01ff9d46dbdf7ba288de
 
   return BookingStatusUI.scheduled;
 }
@@ -89,11 +111,147 @@ class _PassengerBookingsPageState extends State<PassengerBookingsPage> {
                       _BookingsList(items: history, onRefresh: _load),
                     ],
                   ),
+<<<<<<< HEAD
+=======
       ),
     );
   }
 }
 
+class _BookingsList extends StatelessWidget {
+  final List<MyBookingItem> items;
+  final Future<void> Function() onRefresh;
+
+  const _BookingsList({required this.items, required this.onRefresh});
+
+  @override
+  Widget build(BuildContext context) {
+    return RefreshIndicator(
+      onRefresh: onRefresh,
+      child: items.isEmpty
+          ? ListView(
+              children: const [
+                SizedBox(height: 140),
+                Center(child: Text("No bookings found")),
+              ],
+            )
+          : ListView.separated(
+              padding: const EdgeInsets.all(12),
+              itemCount: items.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 2),
+              itemBuilder: (_, i) {
+                final b = items[i];
+                return _BookingCard(
+                  item: b,
+                  onTap: () async {
+                    // refresh when coming back (seat changed / cancelled)
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => BookingDetailsPage(item: b)),
+                    );
+                    await onRefresh();
+                  },
+                );
+              },
+            ),
+    );
+  }
+}
+
+class _BookingCard extends StatelessWidget {
+  final MyBookingItem item;
+  final VoidCallback onTap;
+
+  const _BookingCard({required this.item, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final uiStatus = mapUiStatus(item);
+
+    final dt = item.departureTime.toLocal();
+    final dateTimeText =
+        "${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year} · ${_time(dt)}";
+
+    final theme = Theme.of(context);
+    final bg = theme.colorScheme.surfaceVariant;
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: theme.dividerColor.withOpacity(0.35)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // leading icon
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: theme.dividerColor.withOpacity(0.35)),
+              ),
+              child: const Icon(Icons.directions_bus_rounded),
+            ),
+            const SizedBox(width: 12),
+
+            // main content
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.routeText,
+                    style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Icon(Icons.schedule, size: 16, color: theme.hintColor),
+                      const SizedBox(width: 6),
+                      Text(dateTimeText, style: theme.textTheme.bodyMedium?.copyWith(color: theme.hintColor)),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _MiniPill(text: "Seat: ${item.seatLabel}"),
+                      // You can add more pills later: price, boarding stop, etc.
+                    ],
+                  )
+                ],
+              ),
+            ),
+
+            const SizedBox(width: 10),
+            _StatusBadge(status: uiStatus),
+          ],
+        ),
+>>>>>>> d7249bdd1a77b7faee6d01ff9d46dbdf7ba288de
+      ),
+    );
+  }
+
+  String _time(DateTime dt) {
+    final h = dt.hour;
+    final hh = (h % 12 == 0) ? 12 : (h % 12);
+    final mm = dt.minute.toString().padLeft(2, '0');
+    final ampm = h >= 12 ? "PM" : "AM";
+    return "$hh:$mm $ampm";
+  }
+}
+
+<<<<<<< HEAD
 class _BookingsList extends StatelessWidget {
   final List<MyBookingItem> items;
   final Future<void> Function() onRefresh;
@@ -129,10 +287,28 @@ class _BookingsList extends StatelessWidget {
                 );
               },
             ),
+=======
+class _MiniPill extends StatelessWidget {
+  final String text;
+  const _MiniPill({required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: theme.dividerColor.withOpacity(0.35)),
+      ),
+      child: Text(text, style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700)),
+>>>>>>> d7249bdd1a77b7faee6d01ff9d46dbdf7ba288de
     );
   }
 }
 
+<<<<<<< HEAD
 class _BookingCard extends StatelessWidget {
   final MyBookingItem item;
   final VoidCallback onTap;
@@ -189,6 +365,9 @@ class _BookingCard extends StatelessWidget {
   }
 }
 
+=======
+
+>>>>>>> d7249bdd1a77b7faee6d01ff9d46dbdf7ba288de
 class _StatusBadge extends StatelessWidget {
   final BookingStatusUI status;
   const _StatusBadge({required this.status});

@@ -19,6 +19,10 @@ import authRoutes from "./routes/auth.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
 import tripRoutes from "./routes/trip.routes.js";
 import bookingRoutes from "./routes/booking.routes.js";
+import notificationRoutes from "./routes/notification.routes.js";
+import conductorRoutes from "./routes/conductor.routes.js";
+import routeRoutes from "./routes/route.routes.js";
+
 import { startExpirePendingBookingsJob } from "./jobs/expirePendingBookings.job.js";
 import notificationRoutes from "./routes/notification.routes.js";
 
@@ -27,6 +31,12 @@ import { initTrackingWS } from "./ws/tracking.ws.js";
 
 import routeRoutes from "./routes/route.routes.js";
 
+
+// ✅ WS handlers
+import { initNotificationWS } from "./ws/notification.ws.js";
+import { initRealtimeWS } from "./ws/realtime.ws.js";
+// OPTIONAL: only if you actually use /ws/tracking
+import { initTrackingWS } from "./ws/tracking.ws.js";
 
 const app = express();
 
@@ -48,8 +58,13 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/trips", tripRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/notifications", notificationRoutes);
+<<<<<<< HEAD
 app.use("/api/routes", routeRoutes);
 
+=======
+app.use("/api/conductor", conductorRoutes);
+app.use("/api/routes", routeRoutes);
+>>>>>>> d7249bdd1a77b7faee6d01ff9d46dbdf7ba288de
 
 app.get("/health", (req, res) => res.json({ ok: true }));
 app.get("/", (req, res) => res.send("HBTS Backend is running 🚀"));
@@ -60,22 +75,48 @@ const PORT = process.env.PORT || 4000;
 const server = http.createServer(app);
 
 // ✅ WS servers (manual upgrade routing - reliable for multiple WS paths)
+<<<<<<< HEAD
 export const notificationWss = new WebSocketServer({ noServer: true });
 export const trackingWss = new WebSocketServer({ noServer: true });
 
 // ✅ Attach handlers
 initNotificationWS(notificationWss);
 initTrackingWS(trackingWss);
+=======
+export const notificationsWss = new WebSocketServer({ noServer: true });
+export const realtimeWss = new WebSocketServer({ noServer: true });
+export const trackingWss = new WebSocketServer({ noServer: true }); // optional but safe to keep
+
+// ✅ Attach handlers
+initNotificationWS(notificationsWss);
+initRealtimeWS(realtimeWss);
+initTrackingWS(trackingWss); // if tracking.ws.js exists; otherwise remove this line + import
+>>>>>>> d7249bdd1a77b7faee6d01ff9d46dbdf7ba288de
 
 // ✅ Route WS upgrades by path
 server.on("upgrade", (req, socket, head) => {
   try {
+<<<<<<< HEAD
     const url = new URL(req.url, "http://localhost");
     const pathname = url.pathname;
 
     if (pathname === "/ws/notifications") {
       notificationWss.handleUpgrade(req, socket, head, (ws) => {
         notificationWss.emit("connection", ws, req);
+=======
+    const { pathname } = new URL(req.url, `http://${req.headers.host}`);
+
+    if (pathname === "/ws/notifications") {
+      notificationsWss.handleUpgrade(req, socket, head, (ws) => {
+        notificationsWss.emit("connection", ws, req);
+      });
+      return;
+    }
+
+    if (pathname === "/ws/realtime") {
+      realtimeWss.handleUpgrade(req, socket, head, (ws) => {
+        realtimeWss.emit("connection", ws, req);
+>>>>>>> d7249bdd1a77b7faee6d01ff9d46dbdf7ba288de
       });
       return;
     }

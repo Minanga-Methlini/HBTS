@@ -1,4 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<<<<<<< HEAD
+=======
+<uses-permission android:name="android.permission.CAMERA" />
+
+>>>>>>> d7249bdd1a77b7faee6d01ff9d46dbdf7ba288de
     <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="hbts"
