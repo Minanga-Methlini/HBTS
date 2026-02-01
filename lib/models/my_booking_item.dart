@@ -54,10 +54,6 @@ class MyBookingItem {
   String get routeText => routeName.isNotEmpty ? routeName : "$fromLocation → $toLocation";
 
   bool get isHistory {
-<<<<<<< HEAD
-    final t = tripStatus.toLowerCase();
-    return t == "cancelled" || t == "completed";
-=======
     final t = tripStatus.toLowerCase().trim();
     final now = DateTime.now();
 
@@ -70,6 +66,5 @@ class MyBookingItem {
     }
 
     return false;
->>>>>>> d7249bdd1a77b7faee6d01ff9d46dbdf7ba288de
   }
 }

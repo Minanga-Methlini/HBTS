@@ -9,7 +9,6 @@ import '../state/notification_store.dart';
 import '../api/booking_api.dart';
 import '../models/my_booking_item.dart';
 import 'booking_details_page.dart';
-import 'track_my_booking_list_page.dart';
 
 
 class HomePage extends StatefulWidget {
@@ -456,7 +455,6 @@ class _HomeBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     debugPrint("HOME BODY upcomingTrip = ${upcomingTrip == null ? 'NULL' : 'HAS DATA'}");
-    final blue = Colors.blue.shade700;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
@@ -706,10 +704,9 @@ class _UpcomingTripCard extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
                     color: Colors.green.shade400,
-<<<<<<< HEAD
-=======
-                    border: Border.all(color: Colors.red, width: 2),
+                    borderRadius: BorderRadius.circular(999),
                   ),
+                  child: Text(
                     trip.status,
                     style: const TextStyle(
                       color: Colors.white,
@@ -750,6 +747,64 @@ class _UpcomingTripCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _EmptyUpcomingCard extends StatelessWidget {
+  final VoidCallback onTapReserve;
+
+  const _EmptyUpcomingCard({required this.onTapReserve});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.blue.shade100),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: Colors.blue.shade100,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(Icons.event_busy_rounded, color: Colors.blue.shade700),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  "No upcoming trips yet",
+                  style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  "Reserve a seat to see it here.",
+                  style: TextStyle(color: Colors.grey.shade700, fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          OutlinedButton(
+            onPressed: onTapReserve,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.blue.shade700,
+              side: BorderSide(color: Colors.blue.shade200),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text("Reserve"),
+          ),
+        ],
       ),
     );
   }

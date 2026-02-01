@@ -167,7 +167,8 @@ Future<void> showTokenDialog(String token) async {
         TextButton(
           onPressed: () async {
             await Clipboard.setData(ClipboardData(text: token));
-            if (mounted) Navigator.pop(context);
+            if (!mounted) return;
+            Navigator.pop(context);
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Token copied to clipboard')),
             );
