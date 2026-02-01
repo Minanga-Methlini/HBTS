@@ -48,9 +48,4 @@ router.post("/admin/login/verify-otp",
 );
 router.get("/me", requireAuth, getMe);
  
-
 export default router;
-
-
-
-
