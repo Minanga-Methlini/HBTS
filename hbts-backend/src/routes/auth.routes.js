@@ -43,13 +43,9 @@ router.post("/admin/login/verify-otp",
 );
 router.get("/me", requireAuth, getMe);
  
-<<<<<<< HEAD
-export default router;
-=======
 
 export default router;
 
 
 
 
->>>>>>> origin/pasindu

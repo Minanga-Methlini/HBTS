@@ -2,12 +2,8 @@ import 'package:flutter/material.dart';
 import '../services/auth_api.dart';
 import '../services/token_store.dart';
 import '../app_routes.dart';
-<<<<<<< HEAD
-import '../admin/dashboard.dart';
-=======
 import '/admin/dashboard.dart';
 import 'package:flutter/services.dart';
->>>>>>> origin/pasindu
 
 
 /// OTP flow types

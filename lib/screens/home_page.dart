@@ -6,12 +6,9 @@ import '../services/user_api.dart';
 import '../models/user_model.dart';
 import '../app_routes.dart';
 import '../state/notification_store.dart';
-<<<<<<< HEAD
-=======
 import '../api/booking_api.dart';
 import '../models/my_booking_item.dart';
 import 'booking_details_page.dart';
->>>>>>> origin/pasindu
 import 'track_my_booking_list_page.dart';
 
 
@@ -155,16 +152,7 @@ class _HomePageState extends State<HomePage> {
   // For now it can go to myBookings so you don't break anything.
   void _goUpcomingSchedules() => Navigator.pushNamed(context, AppRoutes.upcomingToday);
 
-<<<<<<< HEAD
-  void _goTrackBooking() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const TrackMyBookingListPage()),
-    );
-  }
-=======
   void _goTrackBooking() => Navigator.pushNamed(context, AppRoutes.trackMyBooking);
->>>>>>> origin/pasindu
   void _goTrackBus() => Navigator.pushNamed(context, AppRoutes.trackBus);
 
   // Nearest trip card → booking details
@@ -467,12 +455,9 @@ class _HomeBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-<<<<<<< HEAD
-=======
     debugPrint("HOME BODY upcomingTrip = ${upcomingTrip == null ? 'NULL' : 'HAS DATA'}");
     final blue = Colors.blue.shade700;
 
->>>>>>> origin/pasindu
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
       children: [
@@ -724,10 +709,7 @@ class _UpcomingTripCard extends StatelessWidget {
 <<<<<<< HEAD
 =======
                     border: Border.all(color: Colors.red, width: 2),
->>>>>>> d7249bdd1a77b7faee6d01ff9d46dbdf7ba288de
-                    borderRadius: BorderRadius.circular(999),
                   ),
-                  child: Text(
                     trip.status,
                     style: const TextStyle(
                       color: Colors.white,

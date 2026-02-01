@@ -14,14 +14,7 @@ import 'package:http/http.dart' as http;
 class TrackMyBookingPage extends StatefulWidget {
   final int? bookingId;
 
-<<<<<<< HEAD
-  const TrackMyBookingPage({
-    super.key,
-    this.bookingId,
-  });
-=======
   const TrackMyBookingPage({Key? key, this.bookingId}) : super(key: key);
->>>>>>> origin/pasindu
 
   @override
   State<TrackMyBookingPage> createState() => _TrackMyBookingPageState();
