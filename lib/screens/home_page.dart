@@ -5,7 +5,6 @@ import '../services/token_store.dart';
 import '../services/user_api.dart';
 import '../models/user_model.dart';
 import '../app_routes.dart';
-import 'notifications_page.dart';
 import '../state/notification_store.dart';
 import 'track_my_booking_list_page.dart';
 
@@ -267,7 +266,6 @@ class _StylishTopBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final topPadding = MediaQuery.of(context).padding.top;
-    final blue = Colors.blue.shade700;
 
     return Container(
       padding: EdgeInsets.fromLTRB(16, topPadding + 10, 16, 14),
@@ -284,7 +282,7 @@ class _StylishTopBar extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.10),
+            color: Colors.black.withAlpha((0.10 * 255).round()),
             blurRadius: 18,
             offset: const Offset(0, 10),
           ),
@@ -297,9 +295,9 @@ class _StylishTopBar extends StatelessWidget {
             width: 42,
             height: 42,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.18),
+              color: Colors.white.withAlpha((0.18 * 255).round()),
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.white.withOpacity(0.25)),
+              border: Border.all(color: Colors.white.withAlpha((0.25 * 255).round())),
             ),
             child: const Icon(Icons.directions_bus_rounded, color: Colors.white),
           ),
@@ -329,7 +327,7 @@ class _StylishTopBar extends StatelessWidget {
                 top: 10,
                 child: Selector<NotificationStore, int>(
                   selector: (_, store) => store.unreadCount,
-                  builder: (_, unreadCount, __) {
+                  builder: (context, unreadCount, child) {
                     if (unreadCount <= 0) return const SizedBox.shrink();
                     return Container(
                       width: 10,
@@ -350,7 +348,7 @@ class _StylishTopBar extends StatelessWidget {
             onTap: onProfile,
             child: CircleAvatar(
               radius: 18,
-              backgroundColor: Colors.white.withOpacity(0.22),
+              backgroundColor: Colors.white.withAlpha((0.22 * 255).round()),
               backgroundImage: hasPhoto ? NetworkImage(photoUrl!) : null,
               child: !hasPhoto
                   ? Text(
@@ -401,8 +399,6 @@ class _HomeBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final blue = Colors.blue.shade700;
-
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
       children: [
@@ -413,7 +409,7 @@ class _HomeBody extends StatelessWidget {
             gradient: LinearGradient(
               colors: [
                 Colors.blue.shade50,
-                Colors.blue.shade100.withOpacity(0.55),
+                Colors.blue.shade100.withAlpha((0.55 * 255).round()),
               ],
             ),
             borderRadius: BorderRadius.circular(18),
@@ -563,7 +559,7 @@ class _CardShell extends StatelessWidget {
         border: Border.all(color: Colors.grey.shade200),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withAlpha((0.06 * 255).round()),
             blurRadius: 18,
             offset: const Offset(0, 10),
           ),
@@ -604,39 +600,6 @@ class _InputLikeTile extends StatelessWidget {
   }
 }
 
-class _EmptyUpcomingCard extends StatelessWidget {
-  final VoidCallback onTapReserve;
-  const _EmptyUpcomingCard({required this.onTapReserve});
-
-  @override
-  Widget build(BuildContext context) {
-    return _CardShell(
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: Colors.blue.shade50,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.blue.shade100),
-            ),
-            child: Icon(Icons.event_available_rounded, color: Colors.blue.shade700),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              "No upcoming trip yet.\nMake a reservation to get started.",
-              style: TextStyle(color: Colors.grey.shade800, fontWeight: FontWeight.w600),
-            ),
-          ),
-          TextButton(onPressed: onTapReserve, child: const Text("Reserve")),
-        ],
-      ),
-    );
-  }
-}
-
 class _UpcomingTripCard extends StatelessWidget {
   final UpcomingTripUiModel trip;
   final VoidCallback onTap;
@@ -657,7 +620,7 @@ class _UpcomingTripCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(18),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.10),
+              color: Colors.black.withAlpha((0.10 * 255).round()),
               blurRadius: 18,
               offset: const Offset(0, 10),
             ),
@@ -756,7 +719,7 @@ class _ActionTile extends StatelessWidget {
           border: Border.all(color: Colors.blue.shade100), // Blue border
           boxShadow: [
             BoxShadow(
-              color: Colors.blue.withOpacity(0.08), // Blue-tinted shadow
+              color: Colors.blue.withAlpha((0.08 * 255).round()), // Blue-tinted shadow
               blurRadius: 14,
               offset: const Offset(0, 8),
             ),
@@ -819,7 +782,7 @@ class _BigActionCard extends StatelessWidget {
           border: Border.all(color: Colors.grey.shade300), // Slightly darker border
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.06),
+              color: Colors.black.withAlpha((0.06 * 255).round()),
               blurRadius: 18,
               offset: const Offset(0, 10),
             ),
@@ -899,7 +862,7 @@ class _SpotlightBottomNav extends StatelessWidget {
                     border: Border.all(color: Colors.grey.shade200),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.10),
+                        color: Colors.black.withAlpha((0.10 * 255).round()),
                         blurRadius: 18,
                         offset: const Offset(0, 10),
                       ),
@@ -950,7 +913,7 @@ class _SpotlightBottomNav extends StatelessWidget {
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: blue.withOpacity(0.35),
+                          color: blue.withAlpha((0.35 * 255).round()),
                           blurRadius: 22,
                           offset: const Offset(0, 12),
                         ),
@@ -1018,3 +981,4 @@ class _NavItem extends StatelessWidget {
     );
   }
 }
+

@@ -74,6 +74,126 @@ class _TripDetailsPageState extends State<TripDetailsPage>
     });
   }
 
+  Future<void> _openAddStop() async {
+    final tripId = _tripId;
+    if (tripId == null) return;
+
+    final stopIdCtrl = TextEditingController();
+    final orderCtrl = TextEditingController();
+    final timeCtrl = TextEditingController();
+    bool boardingAllowed = true;
+
+    Future<void> pickTime(StateSetter setState) async {
+      final picked = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay.now(),
+      );
+      if (picked == null) return;
+      final hh = picked.hour.toString().padLeft(2, "0");
+      final mm = picked.minute.toString().padLeft(2, "0");
+      setState(() => timeCtrl.text = "$hh:$mm");
+    }
+
+    String? combineDateAndTime(String? dateRaw, String timeRaw) {
+      final date = (dateRaw ?? "").trim();
+      final time = timeRaw.trim();
+      if (time.isEmpty) return null;
+      if (time.contains("-")) return time;
+      final safeTime = time.length == 5 ? "$time:00" : time;
+      if (date.isEmpty) return safeTime;
+      return "$date $safeTime";
+    }
+
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setState) {
+          return AlertDialog(
+            title: const Text("Add Trip Stop"),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: stopIdCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: "Stop ID"),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: orderCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: "Stop Order"),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: timeCtrl,
+                  readOnly: true,
+                  onTap: () => pickTime(setState),
+                  decoration: const InputDecoration(
+                    labelText: "Scheduled Time",
+                    hintText: "HH:MM",
+                    suffixIcon: Icon(Icons.schedule),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text("Boarding Allowed"),
+                  value: boardingAllowed,
+                  onChanged: (value) => setState(() => boardingAllowed = value),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: const Text("Cancel"),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(dialogContext, true),
+                child: const Text("Add"),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    if (saved != true) return;
+
+    try {
+      final stopId = int.tryParse(stopIdCtrl.text.trim());
+      if (stopId == null) {
+        throw Exception("Stop ID is required");
+      }
+      final order = int.tryParse(orderCtrl.text.trim());
+      final scheduledTime = combineDateAndTime(
+        _trip["trip_date"]?.toString(),
+        timeCtrl.text,
+      );
+
+      await AdminApi.addTripStop(tripId, {
+        "stopId": stopId,
+        if (order != null) "stopOrder": order,
+        if (scheduledTime != null) "scheduledTime": scheduledTime,
+        "isBoardingAllowed": boardingAllowed,
+      });
+
+      if (!mounted) return;
+      setState(() {
+        _stopsFuture = _loadStops();
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Trip stop added")),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final tripId = _valueAny(["trip_id", "tripId", "id"]);
@@ -89,9 +209,9 @@ class _TripDetailsPageState extends State<TripDetailsPage>
         _valueAny(["driver_name", "driverName", "full_name", "name"]);
     final tripDate = _formatDate(_trip["trip_date"] ?? _trip["tripDate"]);
     final departure =
-        _formatDateTime(_trip["departure_time"] ?? _trip["departureTime"]);
+        _formatTime(_trip["departure_time"] ?? _trip["departureTime"]);
     final arrival =
-        _formatDateTime(_trip["arrival_time"] ?? _trip["arrivalTime"]);
+        _formatTime(_trip["arrival_time"] ?? _trip["arrivalTime"]);
     final status = _valueAny(["status"], fallback: "scheduled");
     final statusLabel = _statusLabel(status);
 
@@ -172,6 +292,13 @@ class _TripDetailsPageState extends State<TripDetailsPage>
                   },
                   icon: const Icon(Icons.edit),
                   label: const Text("Edit Trip"),
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(0, 36),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -186,47 +313,74 @@ class _TripDetailsPageState extends State<TripDetailsPage>
                 return Center(child: Text(snapshot.error.toString()));
               }
               final stops = snapshot.data ?? [];
-              if (stops.isEmpty) {
-                return const Center(child: Text("No trip stops found"));
-              }
-              return ListView.separated(
-                padding: const EdgeInsets.all(16),
-                itemCount: stops.length,
-                separatorBuilder: (context, index) => const SizedBox(height: 12),
-                itemBuilder: (_, index) {
-                  final stop = stops[index] as Map<String, dynamic>;
-                  final stopId = stop["stop_id"] ?? stop["stopId"] ?? stop["id"];
-                  final name = stop["stop_name"] ??
-                      stop["stopName"] ??
-                      stop["name"] ??
-                      "Stop $stopId";
-                  final code = stop["stop_code"] ??
-                      stop["stopCode"] ??
-                      stop["code"];
-                  final order = stop["stop_order"] ??
-                      stop["stopOrder"] ??
-                      stop["order"];
-                  final time =
-                      _formatDateTime(stop["scheduled_time"] ?? stop["time"]);
-                  final boarding = stop["is_boarding_allowed"] == true;
-                  return Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            "${order ?? "-"}${order == null ? "" : "."} $name${code != null ? " ($code)" : ""}",
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                          const SizedBox(height: 6),
-                          Text("Scheduled: $time"),
-                          Text("Boarding: ${boarding ? "Yes" : "No"}"),
-                        ],
+              return Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: SizedBox(
+                        height: 34,
+                        child: OutlinedButton.icon(
+                          onPressed: _openAddStop,
+                          icon: const Icon(Icons.add),
+                          label: const Text("Add Stop"),
+                        ),
                       ),
                     ),
-                  );
-                },
+                  ),
+                  const SizedBox(height: 8),
+                  Expanded(
+                    child: stops.isEmpty
+                        ? const Center(child: Text("No trip stops found"))
+                        : ListView.separated(
+                            padding: const EdgeInsets.all(16),
+                            itemCount: stops.length,
+                            separatorBuilder: (context, index) =>
+                                const SizedBox(height: 12),
+                            itemBuilder: (_, index) {
+                              final stop = stops[index] as Map<String, dynamic>;
+                              final stopId =
+                                  stop["stop_id"] ?? stop["stopId"] ?? stop["id"];
+                              final name = stop["stop_name"] ??
+                                  stop["stopName"] ??
+                                  stop["name"] ??
+                                  "Stop $stopId";
+                              final code = stop["stop_code"] ??
+                                  stop["stopCode"] ??
+                                  stop["code"];
+                              final order = stop["stop_order"] ??
+                                  stop["stopOrder"] ??
+                                  stop["order"];
+                              final time = _formatDateTime(
+                                stop["scheduled_time"] ?? stop["time"],
+                              );
+                              final boarding =
+                                  stop["is_boarding_allowed"] == true;
+                              return Card(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(12),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        "${order ?? "-"}${order == null ? "" : "."} $name${code != null ? " ($code)" : ""}",
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleMedium,
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text("Scheduled: $time"),
+                                      Text(
+                                          "Boarding: ${boarding ? "Yes" : "No"}"),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                ],
               );
             },
           ),
@@ -346,6 +500,29 @@ String _formatDateTime(dynamic value) {
   final h = parsed.hour.toString().padLeft(2, "0");
   final min = parsed.minute.toString().padLeft(2, "0");
   return "$y-$m-$d $h:$min";
+}
+
+String _formatTime(dynamic value) {
+  if (value == null) return "-";
+  final raw = value.toString().trim();
+  if (raw.isEmpty) return "-";
+  final parsed = DateTime.tryParse(raw);
+  if (parsed != null) {
+    final h = parsed.hour.toString().padLeft(2, "0");
+    final m = parsed.minute.toString().padLeft(2, "0");
+    return "$h:$m";
+  }
+  if (raw.contains(" ")) {
+    final parts = raw.split(" ");
+    return _formatTime(parts.last);
+  }
+  if (raw.contains(":")) {
+    final bits = raw.split(":");
+    if (bits.length >= 2) {
+      return "${bits[0].padLeft(2, "0")}:${bits[1].padLeft(2, "0")}";
+    }
+  }
+  return raw;
 }
 
 String _statusLabel(String value) {

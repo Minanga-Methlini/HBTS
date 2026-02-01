@@ -368,3 +368,52 @@ export const deleteBus = async (req, res) => {
     res.status(500).json({ message: "Failed to delete bus" });
   }
 };
+
+export const restoreBus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const columns = await getBusColumns();
+    const idCol = getIdColumn(columns) ?? "bus_id";
+
+    let result = null;
+    if (columns.includes("deleted_at")) {
+      result = await pool.query(
+        `
+        UPDATE buses
+        SET deleted_at = NULL,
+            updated_at = now()
+        WHERE "${idCol}" = $1
+          AND deleted_at IS NOT NULL
+        RETURNING *
+        `,
+        [id]
+      );
+    } else if (columns.includes("is_deleted")) {
+      result = await pool.query(
+        `
+        UPDATE buses
+        SET is_deleted = false,
+            updated_at = now()
+        WHERE "${idCol}" = $1
+          AND is_deleted = true
+        RETURNING *
+        `,
+        [id]
+      );
+    } else {
+      return res
+        .status(400)
+        .json({ message: "Restore not supported for buses" });
+    }
+
+    if (!result.rows.length) {
+      return res.status(404).json({ message: "Bus not found" });
+    }
+
+    const full = await fetchBusById(id, idCol);
+    return res.json(full ?? result.rows[0]);
+  } catch (err) {
+    console.error("Restore bus error:", err);
+    res.status(500).json({ message: "Failed to restore bus" });
+  }
+};

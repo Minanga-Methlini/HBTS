@@ -14,7 +14,6 @@ class RouteSearchPage extends StatefulWidget {
 class _RouteSearchPageState extends State<RouteSearchPage> {
   final _routeIdCtrl = TextEditingController();
   final _nameCtrl = TextEditingController();
-  final _codeCtrl = TextEditingController();
   final _originCtrl = TextEditingController();
   final _destinationCtrl = TextEditingController();
   final _statusCtrl = TextEditingController();
@@ -27,7 +26,6 @@ class _RouteSearchPageState extends State<RouteSearchPage> {
   void dispose() {
     _routeIdCtrl.dispose();
     _nameCtrl.dispose();
-    _codeCtrl.dispose();
     _originCtrl.dispose();
     _destinationCtrl.dispose();
     _statusCtrl.dispose();
@@ -55,7 +53,6 @@ class _RouteSearchPageState extends State<RouteSearchPage> {
       final data = await AdminApi.getRoutes(
         routeId: routeId,
         name: _nameCtrl.text.trim(),
-        code: _codeCtrl.text.trim(),
         origin: _originCtrl.text.trim(),
         destination: _destinationCtrl.text.trim(),
         status: _statusCtrl.text.trim(),
@@ -80,7 +77,6 @@ class _RouteSearchPageState extends State<RouteSearchPage> {
   void _clearAll() {
     _routeIdCtrl.clear();
     _nameCtrl.clear();
-    _codeCtrl.clear();
     _originCtrl.clear();
     _destinationCtrl.clear();
     _statusCtrl.clear();
@@ -184,10 +180,6 @@ class _RouteSearchPageState extends State<RouteSearchPage> {
                               controller: _nameCtrl,
                             ),
                             _buildSearchTile(
-                              label: "Route Code",
-                              controller: _codeCtrl,
-                            ),
-                            _buildSearchTile(
                               label: "Origin",
                               controller: _originCtrl,
                             ),
@@ -204,15 +196,23 @@ class _RouteSearchPageState extends State<RouteSearchPage> {
                       },
                     ),
                     const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        onPressed: _clearAll,
-                        icon: const Icon(Icons.refresh_rounded),
-                        label: const Text("Clear & Refresh"),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.danger,
-                          side: const BorderSide(color: AppColors.danger),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: SizedBox(
+                        height: 34,
+                        child: OutlinedButton.icon(
+                          onPressed: _clearAll,
+                          icon: const Icon(Icons.refresh_rounded),
+                          label: const Text("Clear & Refresh"),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.danger,
+                            side: const BorderSide(color: AppColors.danger),
+                            minimumSize: const Size(140, 34),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                          ),
                         ),
                       ),
                     ),

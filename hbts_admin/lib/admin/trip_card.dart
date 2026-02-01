@@ -38,9 +38,9 @@ class TripCard extends StatelessWidget {
         _valueAny(["driver_name", "driverName", "full_name", "name"]);
     final tripDate = _formatDate(trip["trip_date"] ?? trip["tripDate"]);
     final departure =
-        _formatDateTime(trip["departure_time"] ?? trip["departureTime"]);
+        _formatTime(trip["departure_time"] ?? trip["departureTime"]);
     final arrival =
-        _formatDateTime(trip["arrival_time"] ?? trip["arrivalTime"]);
+        _formatTime(trip["arrival_time"] ?? trip["arrivalTime"]);
     final status = _valueAny(["status"], fallback: "scheduled");
     final statusLabel = _statusLabel(status);
 
@@ -222,17 +222,27 @@ String _formatDate(dynamic value) {
   return "$y-$m-$d";
 }
 
-String _formatDateTime(dynamic value) {
+String _formatTime(dynamic value) {
   if (value == null) return "-";
-  final raw = value.toString();
+  final raw = value.toString().trim();
+  if (raw.isEmpty) return "-";
   final parsed = DateTime.tryParse(raw);
-  if (parsed == null) return raw;
-  final y = parsed.year.toString().padLeft(4, "0");
-  final m = parsed.month.toString().padLeft(2, "0");
-  final d = parsed.day.toString().padLeft(2, "0");
-  final h = parsed.hour.toString().padLeft(2, "0");
-  final min = parsed.minute.toString().padLeft(2, "0");
-  return "$y-$m-$d $h:$min";
+  if (parsed != null) {
+    final h = parsed.hour.toString().padLeft(2, "0");
+    final min = parsed.minute.toString().padLeft(2, "0");
+    return "$h:$min";
+  }
+  if (raw.contains(" ")) {
+    final parts = raw.split(" ");
+    return _formatTime(parts.last);
+  }
+  if (raw.contains(":")) {
+    final bits = raw.split(":");
+    if (bits.length >= 2) {
+      return "${bits[0].padLeft(2, "0")}:${bits[1].padLeft(2, "0")}";
+    }
+  }
+  return raw;
 }
 
 String _statusLabel(String value) {

@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import '../services/auth_api.dart';
 import '../services/token_store.dart';
 import '../app_routes.dart';
-import '/admin/dashboard.dart';
+import '../admin/dashboard.dart';
+
 
 /// OTP flow types
 enum OtpFlow {

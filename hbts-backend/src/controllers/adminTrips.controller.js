@@ -405,6 +405,149 @@ export const deleteTrip = async (req, res) => {
   }
 };
 
+export const restoreTrip = async (req, res) => {
+  try {
+    const columns = await getColumns("trips");
+    let result = null;
+
+    if (columns.includes("deleted_at")) {
+      result = await pool.query(
+        `
+        UPDATE trips
+        SET deleted_at = NULL,
+            updated_at = now()
+        WHERE trip_id = $1
+          AND deleted_at IS NOT NULL
+        RETURNING *
+        `,
+        [req.params.id]
+      );
+    } else if (columns.includes("is_deleted")) {
+      result = await pool.query(
+        `
+        UPDATE trips
+        SET is_deleted = false,
+            updated_at = now()
+        WHERE trip_id = $1
+          AND is_deleted = true
+        RETURNING *
+        `,
+        [req.params.id]
+      );
+    } else {
+      return res
+        .status(400)
+        .json({ message: "Restore not supported for trips" });
+    }
+
+    if (!result.rows.length) {
+      return res.status(404).json({ message: "Trip not found" });
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error("Restore trip error:", err);
+    res.status(500).json({ message: "Failed to restore trip" });
+  }
+};
+
+export const addTripStop = async (req, res) => {
+  try {
+    const tripId = Number.parseInt(req.params.id, 10);
+    if (Number.isNaN(tripId)) {
+      return res.status(400).json({ message: "Invalid trip id" });
+    }
+
+    const columns = await getColumns("trip_stops");
+    if (!columns.length) {
+      return res.status(500).json({ message: "Trip stops table not found" });
+    }
+
+    const tripIdCol = pickColumn(columns, ["trip_id", "tripId"]);
+    const stopIdCol = pickColumn(columns, ["stop_id", "stopId"]);
+    const orderCol = pickColumn(columns, ["stop_order", "stopOrder", "order"]);
+    const timeCol = pickColumn(columns, ["scheduled_time", "time"]);
+    const boardingCol = pickColumn(columns, [
+      "is_boarding_allowed",
+      "boarding_allowed",
+      "isBoardingAllowed",
+    ]);
+
+    if (!tripIdCol || !stopIdCol) {
+      return res
+        .status(500)
+        .json({ message: "Trip stop columns are not configured" });
+    }
+
+    const body = req.body ?? {};
+    const stopId =
+      body.stopId ??
+      body.stop_id ??
+      body.stop ??
+      body.id ??
+      null;
+    const stopOrder =
+      body.stopOrder ?? body.stop_order ?? body.order ?? null;
+    const scheduledTime =
+      body.scheduledTime ?? body.scheduled_time ?? body.time ?? null;
+    const isBoardingAllowed =
+      body.isBoardingAllowed ??
+      body.is_boarding_allowed ??
+      body.boarding_allowed ??
+      null;
+    const parseBool = (value) => {
+      if (typeof value === "boolean") return value;
+      const str = value?.toString?.().toLowerCase();
+      return ["true", "1", "yes"].includes(str);
+    };
+
+    if (stopId == null || stopId == "") {
+      return res.status(400).json({ message: "Stop id is required" });
+    }
+
+    const cols = [];
+    const params = [];
+    const placeholders = [];
+
+    const addParam = (column, value) => {
+      if (!column) return;
+      cols.push(`"${column}"`);
+      params.push(value ?? null);
+      placeholders.push(`$${params.length}`);
+    };
+
+    addParam(tripIdCol, tripId);
+    addParam(stopIdCol, stopId);
+    if (orderCol && stopOrder != null && stopOrder != "") {
+      addParam(orderCol, stopOrder);
+    }
+    if (timeCol && scheduledTime) {
+      addParam(timeCol, scheduledTime);
+    }
+    if (boardingCol && isBoardingAllowed != null && isBoardingAllowed != "") {
+      addParam(boardingCol, parseBool(isBoardingAllowed));
+    }
+
+    if (cols.length < 2) {
+      return res.status(400).json({ message: "Missing stop data" });
+    }
+
+    const result = await pool.query(
+      `
+      INSERT INTO trip_stops (${cols.join(", ")})
+      VALUES (${placeholders.join(", ")})
+      RETURNING *
+      `,
+      params
+    );
+
+    res.status(201).json(result.rows[0] ?? {});
+  } catch (err) {
+    console.error("Add trip stop error:", err);
+    res.status(500).json({ message: "Failed to add trip stop" });
+  }
+};
+
 export const listTripStops = async (req, res) => {
   try {
     const stopsColumns = await getColumns("stops");

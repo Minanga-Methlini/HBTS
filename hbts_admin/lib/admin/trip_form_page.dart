@@ -62,11 +62,12 @@ class _TripFormPageState extends State<TripFormPage> {
     _selectedDriverId = _parseInt(trip["driver_id"]);
     _operatorIdCtrl.text = (trip["operator_id"] ?? "").toString();
     _tripDateCtrl.text = _formatDate(trip["trip_date"]);
-    _departureCtrl.text = _formatDateTime(trip["departure_time"]);
-    _arrivalCtrl.text = _formatDateTime(trip["arrival_time"]);
+    _departureCtrl.text = _formatTime(trip["departure_time"]);
+    _arrivalCtrl.text = _formatTime(trip["arrival_time"]);
     final status = trip["status"]?.toString().trim();
     if (status != null && status.isNotEmpty) {
-      _selectedStatus = status.toLowerCase();
+      final normalized = status.toLowerCase();
+      _selectedStatus = _normalizeStatusForUi(normalized);
     }
   }
 
@@ -111,15 +112,25 @@ class _TripFormPageState extends State<TripFormPage> {
 
   Map<String, dynamic> _buildPayload() {
     final operatorFromBus = _operatorIdForSelectedBus();
+    final tripDate = _tripDateCtrl.text.trim();
+    final status = _normalizeStatusValue(_selectedStatus);
+    final departureRaw = _departureCtrl.text.trim();
+    final arrivalRaw = _arrivalCtrl.text.trim();
+    final departureCombined = _combineDateAndTime(tripDate, departureRaw);
+    final arrivalCombined = _combineDateAndTime(tripDate, arrivalRaw);
+    final arrivalFinal = _normalizeArrivalAfterDeparture(
+      departureCombined,
+      arrivalCombined,
+    );
     return {
       "routeId": _selectedRouteId,
       "operatorId": operatorFromBus ?? _parseInt(_operatorIdCtrl.text),
       "busId": _selectedBusId,
       "driverId": _selectedDriverId,
-      "tripDate": _tripDateCtrl.text.trim(),
-      "departureTime": _departureCtrl.text.trim(),
-      "arrivalTime": _arrivalCtrl.text.trim(),
-      "status": _selectedStatus,
+      "tripDate": tripDate,
+      "departureTime": departureCombined,
+      "arrivalTime": arrivalFinal,
+      "status": status,
     };
   }
 
@@ -246,14 +257,20 @@ class _TripFormPageState extends State<TripFormPage> {
     if (_selectedStatus.isNotEmpty) {
       merged["status"] = _selectedStatus;
     }
-    if (_tripDateCtrl.text.trim().isNotEmpty) {
-      merged["trip_date"] = _tripDateCtrl.text.trim();
+    final tripDate = _tripDateCtrl.text.trim();
+    if (tripDate.isNotEmpty) {
+      merged["trip_date"] = tripDate;
     }
-    if (_departureCtrl.text.trim().isNotEmpty) {
-      merged["departure_time"] = _departureCtrl.text.trim();
+    final departureCombined =
+        _combineDateAndTime(tripDate, _departureCtrl.text.trim());
+    if (departureCombined.isNotEmpty) {
+      merged["departure_time"] = departureCombined;
     }
-    if (_arrivalCtrl.text.trim().isNotEmpty) {
-      merged["arrival_time"] = _arrivalCtrl.text.trim();
+    final arrivalCombined =
+        _combineDateAndTime(tripDate, _arrivalCtrl.text.trim());
+    if (arrivalCombined.isNotEmpty) {
+      merged["arrival_time"] =
+          _normalizeArrivalAfterDeparture(departureCombined, arrivalCombined);
     }
 
     final route = _routes.firstWhere(
@@ -314,15 +331,6 @@ class _TripFormPageState extends State<TripFormPage> {
     return "$y-$m-$d";
   }
 
-  String _formatDateTimeValue(DateTime value) {
-    final y = value.year.toString().padLeft(4, "0");
-    final m = value.month.toString().padLeft(2, "0");
-    final d = value.day.toString().padLeft(2, "0");
-    final h = value.hour.toString().padLeft(2, "0");
-    final min = value.minute.toString().padLeft(2, "0");
-    return "$y-$m-$d $h:$min:00";
-  }
-
   Future<void> _pickDate(TextEditingController controller) async {
     final initial = _parseDate(controller.text) ?? _defaultInitialDate();
     final picked = await showDatePicker(
@@ -335,30 +343,16 @@ class _TripFormPageState extends State<TripFormPage> {
     controller.text = _formatDateValue(picked);
   }
 
-  Future<void> _pickDateTime(TextEditingController controller) async {
+  Future<void> _pickTime(TextEditingController controller) async {
     final now = DateTime.now();
-    final initial = _parseDate(controller.text) ?? now;
-    final pickedDate = await showDatePicker(
+    final picked = await showTimePicker(
       context: context,
-      initialDate: initial,
-      firstDate: DateTime(2000, 1, 1),
-      lastDate: DateTime(2100, 12, 31),
+      initialTime: TimeOfDay.fromDateTime(now),
     );
-    if (pickedDate == null) return;
-    if (!mounted) return;
-    final pickedTime = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.fromDateTime(initial),
-    );
-    if (pickedTime == null) return;
-    final combined = DateTime(
-      pickedDate.year,
-      pickedDate.month,
-      pickedDate.day,
-      pickedTime.hour,
-      pickedTime.minute,
-    );
-    controller.text = _formatDateTimeValue(combined);
+    if (picked == null) return;
+    final h = picked.hour.toString().padLeft(2, "0");
+    final m = picked.minute.toString().padLeft(2, "0");
+    controller.text = "$h:$m";
   }
 
   Widget _textField({
@@ -499,9 +493,9 @@ class _TripFormPageState extends State<TripFormPage> {
                       _textField(
                         label: "Departure Time",
                         controller: _departureCtrl,
-                        hint: "YYYY-MM-DD HH:MM:SS",
+                        hint: "HH:MM",
                         readOnly: true,
-                        onTap: () => _pickDateTime(_departureCtrl),
+                        onTap: () => _pickTime(_departureCtrl),
                         suffixIcon: Icons.schedule,
                         validator: (value) {
                           if ((value ?? "").trim().isEmpty) {
@@ -514,9 +508,9 @@ class _TripFormPageState extends State<TripFormPage> {
                       _textField(
                         label: "Arrival Time",
                         controller: _arrivalCtrl,
-                        hint: "YYYY-MM-DD HH:MM:SS",
+                        hint: "HH:MM",
                         readOnly: true,
-                        onTap: () => _pickDateTime(_arrivalCtrl),
+                        onTap: () => _pickTime(_arrivalCtrl),
                         suffixIcon: Icons.schedule,
                         validator: (value) {
                           if ((value ?? "").trim().isEmpty) {
@@ -559,6 +553,13 @@ class _TripFormPageState extends State<TripFormPage> {
                           onPressed: _addRecord,
                           icon: const Icon(Icons.add_circle_outline),
                           label: const Text("Add Record"),
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: const Size(0, 36),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
+                          ),
                         ),
                       const SizedBox(height: 12),
                       Row(
@@ -568,6 +569,13 @@ class _TripFormPageState extends State<TripFormPage> {
                               onPressed: isEdit ? _updateRecord : null,
                               icon: const Icon(Icons.save_outlined),
                               label: const Text("Update"),
+                              style: OutlinedButton.styleFrom(
+                                minimumSize: const Size(0, 36),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 10,
+                                ),
+                              ),
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -579,6 +587,11 @@ class _TripFormPageState extends State<TripFormPage> {
                                 foregroundColor: AppColors.danger,
                                 side:
                                     const BorderSide(color: AppColors.danger),
+                                minimumSize: const Size(0, 36),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 10,
+                                ),
                               ),
                               label: const Text("Delete"),
                             ),
@@ -610,15 +623,66 @@ String _formatDate(dynamic value) {
   return "$y-$m-$d";
 }
 
-String _formatDateTime(dynamic value) {
+String _formatTime(dynamic value) {
   if (value == null) return "";
-  final raw = value.toString();
+  final raw = value.toString().trim();
+  if (raw.isEmpty) return "";
   final parsed = DateTime.tryParse(raw);
-  if (parsed == null) return raw;
-  final y = parsed.year.toString().padLeft(4, "0");
-  final m = parsed.month.toString().padLeft(2, "0");
-  final d = parsed.day.toString().padLeft(2, "0");
-  final h = parsed.hour.toString().padLeft(2, "0");
-  final min = parsed.minute.toString().padLeft(2, "0");
-  return "$y-$m-$d $h:$min:00";
+  if (parsed != null) {
+    final h = parsed.hour.toString().padLeft(2, "0");
+    final min = parsed.minute.toString().padLeft(2, "0");
+    return "$h:$min";
+  }
+  if (raw.contains(" ")) {
+    final parts = raw.split(" ");
+    return _formatTime(parts.last);
+  }
+  if (raw.contains(":")) {
+    final bits = raw.split(":");
+    if (bits.length >= 2) {
+      return "${bits[0].padLeft(2, "0")}:${bits[1].padLeft(2, "0")}";
+    }
+  }
+  return raw;
+}
+
+String _combineDateAndTime(String dateRaw, String timeRaw) {
+  final date = dateRaw.trim();
+  final time = timeRaw.trim();
+  if (time.isEmpty) return "";
+  if (time.contains("-")) return time;
+  final normalized = time.length == 5 ? "$time:00" : time;
+  if (date.isEmpty) return normalized;
+  return "$date $normalized";
+}
+
+String _normalizeArrivalAfterDeparture(String departure, String arrival) {
+  if (departure.isEmpty || arrival.isEmpty) return arrival;
+  final dep = DateTime.tryParse(departure);
+  final arr = DateTime.tryParse(arrival);
+  if (dep == null || arr == null) return arrival;
+  if (!arr.isBefore(dep)) return arrival;
+  final nextDay = arr.add(const Duration(days: 1));
+  final y = nextDay.year.toString().padLeft(4, "0");
+  final m = nextDay.month.toString().padLeft(2, "0");
+  final d = nextDay.day.toString().padLeft(2, "0");
+  final h = nextDay.hour.toString().padLeft(2, "0");
+  final min = nextDay.minute.toString().padLeft(2, "0");
+  final sec = nextDay.second.toString().padLeft(2, "0");
+  return "$y-$m-$d $h:$min:$sec";
+}
+
+String _normalizeStatusValue(String value) {
+  final normalized = value.toLowerCase().trim();
+  if (normalized.isEmpty) return "scheduled";
+  if (normalized == "in_progress") return "running";
+  if (normalized == "in progress") return "running";
+  if (normalized == "running") return "running";
+  return normalized;
+}
+
+String _normalizeStatusForUi(String value) {
+  final normalized = value.toLowerCase().trim();
+  if (normalized == "running") return "in_progress";
+  return _normalizeStatusValue(normalized);
 }

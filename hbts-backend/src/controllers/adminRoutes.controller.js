@@ -464,3 +464,54 @@ export const deleteRoute = async (req, res) => {
     res.status(500).json({ message: "Failed to delete route" });
   }
 };
+
+export const restoreRoute = async (req, res) => {
+  try {
+    const tableName = await getRoutesTable();
+    if (!tableName) {
+      return res.status(500).json({ message: "Routes table not found" });
+    }
+    const columns = await getRouteColumns(tableName);
+    const idCol = getIdColumn(columns) ?? "route_id";
+
+    let result = null;
+    if (columns.includes("deleted_at")) {
+      result = await pool.query(
+        `
+        UPDATE ${tableName}
+        SET deleted_at = NULL,
+            updated_at = now()
+        WHERE "${idCol}" = $1
+          AND deleted_at IS NOT NULL
+        RETURNING *
+        `,
+        [req.params.id]
+      );
+    } else if (columns.includes("is_deleted")) {
+      result = await pool.query(
+        `
+        UPDATE ${tableName}
+        SET is_deleted = false,
+            updated_at = now()
+        WHERE "${idCol}" = $1
+          AND is_deleted = true
+        RETURNING *
+        `,
+        [req.params.id]
+      );
+    } else {
+      return res
+        .status(400)
+        .json({ message: "Restore not supported for routes" });
+    }
+
+    if (!result.rows.length) {
+      return res.status(404).json({ message: "Route not found" });
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error("Restore route error:", err);
+    res.status(500).json({ message: "Failed to restore route" });
+  }
+};

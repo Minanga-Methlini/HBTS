@@ -58,6 +58,13 @@ const getIdColumn = (columns) =>
 const getUserIdValue = (row) =>
   row.user_id ?? row.userId ?? row.userid ?? row.user_id_ref ?? row.user;
 
+const getDriverRefValue = (row) =>
+  row.drivername ??
+  row.driver_name ??
+  row.driverName ??
+  row.driver_name_ref ??
+  getUserIdValue(row);
+
 const getOperatorIdValue = (row) =>
   row.operator_id ?? row.operatorId ?? row.operatorid ?? row.company_id ?? row.companyId;
 
@@ -99,7 +106,8 @@ const normDriver = (row, source = "drivers") => ({
     row.full_name ??
     row.driver_name ??
     row.fullName ??
-    row.driverName,
+    row.driverName ??
+    row.drivername,
   license_number: row.license_number ?? row.license ?? row.license_no,
   phone: row.phone ?? row.phone_number ?? row.mobile ?? row.mobile_number,
   operator_name:
@@ -115,6 +123,7 @@ const normDriver = (row, source = "drivers") => ({
   rejection_reason: row.rejection_reason ?? row.reason ?? row.rejectionReason,
   created_at: row.created_at ?? row.createdAt,
   updated_at: row.updated_at ?? row.updatedAt,
+  drivername: getDriverRefValue(row),
   user_id: getUserIdValue(row),
   operator_id: getOperatorIdValue(row),
   source,
@@ -159,6 +168,7 @@ const updateRecordFields = async ({ tableName, columns, id, body }) => {
     "name",
     "full_name",
     "driver_name",
+    "drivername",
     "fullName",
     "driverName",
   ]);
@@ -277,18 +287,23 @@ const insertDriverFromTemp = async ({ tempRow, driverColumns, newStatus, reason 
   const placeholders = [];
   const params = [];
 
-  const driverUserIdCol = pickColumn(driverColumns, ["user_id", "userid"]);
-  const tempUserId = getUserIdValue(tempRow);
-  if (driverUserIdCol) {
-    if (!tempUserId) {
-      throw new Error("Missing user_id for driver insert");
+  const driverRefCol = pickColumn(driverColumns, [
+    "drivername",
+    "user_id",
+    "userId",
+    "userid",
+  ]);
+  const tempRefValue = getDriverRefValue(tempRow) ?? normalized.name;
+  if (driverRefCol) {
+    if (!tempRefValue) {
+      throw new Error("Missing driver reference for insert");
     }
 
-    // If a driver already exists for this user, update that record instead of inserting
+    // If a driver already exists for this reference, update that record instead of inserting
     const idCol = getIdColumn(driverColumns) ?? "driver_id";
     const existingDriver = await pool.query(
-      `SELECT * FROM drivers WHERE "${driverUserIdCol}" = $1 LIMIT 1`,
-      [tempUserId]
+      `SELECT * FROM drivers WHERE "${driverRefCol}" = $1 LIMIT 1`,
+      [tempRefValue]
     );
     if (existingDriver.rows.length) {
       const existingId = existingDriver.rows[0][idCol];
@@ -319,8 +334,8 @@ const insertDriverFromTemp = async ({ tempRow, driverColumns, newStatus, reason 
       return fieldsUpdated ?? statusUpdated ?? existingDriver.rows[0];
     }
 
-    cols.push(`"${driverUserIdCol}"`);
-    params.push(tempUserId);
+    cols.push(`"${driverRefCol}"`);
+    params.push(tempRefValue);
     placeholders.push(`$${params.length}`);
   }
 
@@ -342,13 +357,21 @@ const insertDriverFromTemp = async ({ tempRow, driverColumns, newStatus, reason 
 
   const addParam = (col, value) => {
     if (!col) return;
+    if (cols.includes(`"${col}"`)) return;
     cols.push(`"${col}"`);
     params.push(value ?? null);
     placeholders.push(`$${params.length}`);
   };
 
   addParam(
-    pickColumn(driverColumns, ["name", "full_name", "driver_name", "fullName", "driverName"]),
+    pickColumn(driverColumns, [
+      "name",
+      "full_name",
+      "driver_name",
+      "drivername",
+      "fullName",
+      "driverName",
+    ]),
     normalized.name
   );
   addParam(
@@ -456,6 +479,7 @@ export const listDrivers = async (req, res) => {
         "name",
         "full_name",
         "driver_name",
+        "drivername",
         "fullName",
         "driverName",
       ]);
@@ -471,7 +495,11 @@ export const listDrivers = async (req, res) => {
         ? ` WHERE ${driverConditions.join(" AND ")}`
         : "";
 
-      const driverUserIdCol = pickColumn(driverColumns, ["user_id", "userId", "userid"]);
+      const driverUserIdCol = pickColumn(driverColumns, [
+        "user_id",
+        "userId",
+        "userid",
+      ]);
       const driverJoin = driverUserIdCol
         ? ` LEFT JOIN users u ON u.user_id = d."${driverUserIdCol}"`
         : "";
@@ -509,6 +537,7 @@ export const listDrivers = async (req, res) => {
           "name",
           "full_name",
           "driver_name",
+          "drivername",
           "fullName",
           "driverName",
         ]);
@@ -562,7 +591,11 @@ export const getDriverById = async (req, res) => {
 
     const driverColumns = await getDriverColumns();
     const driverIdCol = getIdColumn(driverColumns) ?? "driver_id";
-    const driverUserIdCol = pickColumn(driverColumns, ["user_id", "userId", "userid"]);
+    const driverUserIdCol = pickColumn(driverColumns, [
+      "user_id",
+      "userId",
+      "userid",
+    ]);
 
     if (driverColumns.length) {
       const driverJoin = driverUserIdCol
@@ -737,7 +770,10 @@ export const updateDriverStatus = async (req, res) => {
 
     return res.json(normDriver(updatedTemp, "temp"));
   } catch (err) {
-    if (err?.message?.includes("Missing user_id") || err?.message?.includes("Missing operator_id")) {
+  if (
+    err?.message?.includes("Missing driver reference") ||
+    err?.message?.includes("Missing operator_id")
+  ) {
       return res.status(400).json({ message: err.message });
     }
     console.error("Update driver status error:", err);

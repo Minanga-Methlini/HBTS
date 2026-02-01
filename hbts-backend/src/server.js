@@ -22,6 +22,7 @@ import tripRoutes from "./routes/trip.routes.js";
 import bookingRoutes from "./routes/booking.routes.js";
 import { startExpirePendingBookingsJob } from "./jobs/expirePendingBookings.job.js";
 import notificationRoutes from "./routes/notification.routes.js";
+import reportRoutes from "./routes/report.routes.js";
 
 import { initNotificationWS } from "./ws/notification.ws.js";
 import { initTrackingWS } from "./ws/tracking.ws.js";
@@ -43,6 +44,7 @@ app.use(express.json());
 // ✅ Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/admin/reports", reportRoutes);
 app.use("/api/trips", tripRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/notifications", notificationRoutes);

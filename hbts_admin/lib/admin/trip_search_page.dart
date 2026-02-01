@@ -221,15 +221,23 @@ class _TripSearchPageState extends State<TripSearchPage> {
                       },
                     ),
                     const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        onPressed: _clearAll,
-                        icon: const Icon(Icons.refresh_rounded),
-                        label: const Text("Clear & Refresh"),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.danger,
-                          side: const BorderSide(color: AppColors.danger),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: SizedBox(
+                        height: 34,
+                        child: OutlinedButton.icon(
+                          onPressed: _clearAll,
+                          icon: const Icon(Icons.refresh_rounded),
+                          label: const Text("Clear & Refresh"),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.danger,
+                            side: const BorderSide(color: AppColors.danger),
+                            minimumSize: const Size(140, 34),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                          ),
                         ),
                       ),
                     ),

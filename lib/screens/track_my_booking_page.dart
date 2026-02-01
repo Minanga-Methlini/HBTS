@@ -9,9 +9,9 @@ class TrackMyBookingPage extends StatefulWidget {
   final int? bookingId;
 
   const TrackMyBookingPage({
-    Key? key,
+    super.key,
     this.bookingId,
-  }) : super(key: key);
+  });
 
   @override
   State<TrackMyBookingPage> createState() => _TrackMyBookingPageState();

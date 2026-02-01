@@ -12,6 +12,18 @@ const formatDate = (value) => {
   return `${y}-${m}-${day}`;
 };
 
+const formatDateTime = (value) => {
+  if (!value) return "";
+  const d = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(d.getTime())) return value?.toString?.() ?? "";
+  const y = d.getFullYear().toString().padStart(4, "0");
+  const m = (d.getMonth() + 1).toString().padStart(2, "0");
+  const day = d.getDate().toString().padStart(2, "0");
+  const h = d.getHours().toString().padStart(2, "0");
+  const min = d.getMinutes().toString().padStart(2, "0");
+  return `${y}-${m}-${day} ${h}:${min}`;
+};
+
 const defaultRange = () => {
   const to = new Date();
   const from = new Date(to);
@@ -199,14 +211,18 @@ export const reportSummaryPdf = async (req, res) => {
     );
 
     doc.pipe(res);
-    doc.fontSize(18).text("HBTS Report Summary", { align: "left" });
+    doc.font("Helvetica-Bold").fontSize(18).text("HBTS Report Summary", {
+      align: "left",
+    });
     doc.moveDown(0.5);
-    doc.fontSize(12).text(`Date Range: ${data.range.from} to ${data.range.to}`);
+    doc.font("Helvetica").fontSize(12).text(
+      `Date Range: ${data.range.from} to ${data.range.to}`
+    );
 
     doc.moveDown();
-    doc.fontSize(14).text("Summary");
+    doc.font("Helvetica-Bold").fontSize(14).text("Summary");
     doc.moveDown(0.3);
-    doc.fontSize(11);
+    doc.font("Helvetica").fontSize(11);
     doc.text(`Total Passengers: ${data.summary.passengers_total}`);
     doc.text(`New Passengers: ${data.summary.passengers_new}`);
     doc.text(`Total Trips: ${data.summary.trips_total}`);
@@ -216,21 +232,75 @@ export const reportSummaryPdf = async (req, res) => {
     doc.text(`Cancelled Trips: ${data.summary.trips_cancelled}`);
 
     doc.moveDown();
-    doc.fontSize(14).text("Trips");
-    doc.moveDown(0.3);
-    doc.fontSize(9);
+    doc.font("Helvetica-Bold").fontSize(14).text("Trips");
+    doc.moveDown(0.5);
+
     const rows = data.trips.slice(0, 500);
-    rows.forEach((trip) => {
-      const line = [
-        `#${trip.trip_id ?? "-"}`,
+    const left = doc.page.margins.left;
+    const right = doc.page.margins.right;
+    const pageWidth = doc.page.width - left - right;
+
+    const columns = [
+      { header: "Trip ID", width: 55, key: "trip_id" },
+      { header: "Route", width: 135, key: "route_name" },
+      { header: "Bus", width: 85, key: "license_plate_no" },
+      { header: "Driver", width: 120, key: "driver_name" },
+      { header: "Date", width: 80, key: "trip_date" },
+      { header: "Status", width: 70, key: "status" },
+    ];
+
+    const totalWidth = columns.reduce((sum, c) => sum + c.width, 0);
+    if (totalWidth < pageWidth) {
+      const extra = pageWidth - totalWidth;
+      columns[1].width += extra;
+    }
+
+    const rowHeight = 16;
+
+    const drawHeader = (y) => {
+      let x = left;
+      doc.font("Helvetica-Bold").fontSize(9);
+      columns.forEach((col) => {
+        doc.text(col.header, x, y, { width: col.width });
+        x += col.width;
+      });
+      doc.moveTo(left, y + rowHeight - 2)
+        .lineTo(left + pageWidth, y + rowHeight - 2)
+        .strokeColor("#cccccc")
+        .stroke();
+    };
+
+    let y = doc.y;
+    drawHeader(y);
+    y += rowHeight;
+
+    doc.font("Helvetica").fontSize(9);
+    for (const trip of rows) {
+      if (y + rowHeight > doc.page.height - doc.page.margins.bottom) {
+        doc.addPage();
+        y = doc.y;
+        drawHeader(y);
+        y += rowHeight;
+        doc.font("Helvetica").fontSize(9);
+      }
+
+      let x = left;
+      const values = [
+        trip.trip_id ?? "-",
         trip.route_name ?? trip.route_code ?? "-",
         trip.license_plate_no ?? "-",
         trip.driver_name ?? "-",
         formatDate(trip.trip_date),
         trip.status ?? "-",
-      ].join(" | ");
-      doc.text(line);
-    });
+      ];
+      values.forEach((value, idx) => {
+        doc.text(value?.toString?.() ?? "-", x, y, {
+          width: columns[idx].width,
+        });
+        x += columns[idx].width;
+      });
+      y += rowHeight;
+    }
 
     doc.end();
   } catch (error) {
@@ -248,8 +318,17 @@ export const reportSummaryExcel = async (req, res) => {
 
     const workbook = new ExcelJS.Workbook();
     const summarySheet = workbook.addWorksheet("Summary");
-    summarySheet.addRow(["HBTS Report Summary"]);
-    summarySheet.addRow([`Date Range: ${data.range.from} to ${data.range.to}`]);
+    summarySheet.columns = [
+      { width: 28 },
+      { width: 18 },
+    ];
+    summarySheet.mergeCells("A1:B1");
+    summarySheet.getCell("A1").value = "HBTS Report Summary";
+    summarySheet.getCell("A1").font = { size: 14, bold: true };
+    summarySheet.mergeCells("A2:B2");
+    summarySheet.getCell("A2").value =
+      `Date Range: ${data.range.from} to ${data.range.to}`;
+    summarySheet.getCell("A2").font = { italic: true };
     summarySheet.addRow([]);
     summarySheet.addRow(["Total Passengers", data.summary.passengers_total]);
     summarySheet.addRow(["New Passengers", data.summary.passengers_new]);
@@ -260,29 +339,55 @@ export const reportSummaryExcel = async (req, res) => {
     summarySheet.addRow(["Cancelled Trips", data.summary.trips_cancelled]);
 
     const tripsSheet = workbook.addWorksheet("Trips");
-    tripsSheet.addRow([
-      "Trip ID",
-      "Route",
-      "Route Code",
-      "Bus",
-      "Driver",
-      "Trip Date",
-      "Departure",
-      "Arrival",
-      "Status",
-    ]);
+    tripsSheet.columns = [
+      { header: "Trip ID", key: "trip_id", width: 10 },
+      { header: "Route", key: "route", width: 24 },
+      { header: "Route Code", key: "route_code", width: 14 },
+      { header: "Bus", key: "bus", width: 14 },
+      { header: "Driver", key: "driver", width: 22 },
+      { header: "Trip Date", key: "trip_date", width: 12 },
+      { header: "Departure", key: "departure", width: 18 },
+      { header: "Arrival", key: "arrival", width: 18 },
+      { header: "Status", key: "status", width: 12 },
+    ];
+
+    const headerRow = tripsSheet.getRow(1);
+    headerRow.font = { bold: true };
+    headerRow.alignment = { vertical: "middle", horizontal: "center" };
+    headerRow.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FFEFEFEF" },
+    };
+    tripsSheet.views = [{ state: "frozen", ySplit: 1 }];
+
     data.trips.forEach((trip) => {
-      tripsSheet.addRow([
-        trip.trip_id ?? "",
-        trip.route_name ?? "",
-        trip.route_code ?? "",
-        trip.license_plate_no ?? "",
-        trip.driver_name ?? "",
-        formatDate(trip.trip_date),
-        trip.departure_time ?? "",
-        trip.arrival_time ?? "",
-        trip.status ?? "",
-      ]);
+      tripsSheet.addRow({
+        trip_id: trip.trip_id ?? "",
+        route: trip.route_name ?? "",
+        route_code: trip.route_code ?? "",
+        bus: trip.license_plate_no ?? "",
+        driver: trip.driver_name ?? "",
+        trip_date: formatDate(trip.trip_date),
+        departure: formatDateTime(trip.departure_time),
+        arrival: formatDateTime(trip.arrival_time),
+        status: trip.status ?? "",
+      });
+    });
+
+    tripsSheet.eachRow((row, rowNumber) => {
+      row.alignment = { vertical: "middle", horizontal: "left" };
+      row.eachCell((cell) => {
+        cell.border = {
+          top: { style: "thin", color: { argb: "FFE0E0E0" } },
+          left: { style: "thin", color: { argb: "FFE0E0E0" } },
+          bottom: { style: "thin", color: { argb: "FFE0E0E0" } },
+          right: { style: "thin", color: { argb: "FFE0E0E0" } },
+        };
+        if (rowNumber === 1) {
+          cell.alignment = { vertical: "middle", horizontal: "center" };
+        }
+      });
     });
 
     res.setHeader(

@@ -14,8 +14,8 @@ import 'screens/trip_details_page.dart';
 import 'screens/seat_selection_page.dart';
 import 'screens/confirm_booking_page.dart';
 import 'screens/booking_success_page.dart';
-
 import 'admin/dashboard.dart';
+
 
 
 class AppRoutes {

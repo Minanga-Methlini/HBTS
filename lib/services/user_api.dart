@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../models/user_model.dart';
@@ -13,7 +14,7 @@ class UserApi {
     final token = await TokenStore.getAccessToken();
     final baseUrl = AppConfig.baseUrl; // ✅ use config
 
-    print(
+    debugPrint(
       "ME CALL => $baseUrl$profileEndpoint | token=${token == null ? 'null' : 'present'}",
     );
 
@@ -27,7 +28,7 @@ class UserApi {
         )
         .timeout(const Duration(seconds: 10));
 
-    print("ME RESP => ${res.statusCode} | ${res.body}");
+    debugPrint("ME RESP => ${res.statusCode} | ${res.body}");
 
     if (res.statusCode == 200) {
       final json = jsonDecode(res.body);

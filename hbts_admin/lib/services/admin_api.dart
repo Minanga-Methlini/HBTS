@@ -655,6 +655,30 @@ class AdminApi {
   }
 
   // =======================
+  // ADD TRIP STOP
+  // POST /admin/trips/:id/stops
+  // =======================
+  static Future<Map<String, dynamic>> addTripStop(
+    int tripId,
+    Map<String, dynamic> data,
+  ) async {
+    final uri = Uri.parse("$baseUrl/admin/trips/$tripId/stops");
+
+    final res = await http.post(
+      uri,
+      headers: await _headers(),
+      body: jsonEncode(data),
+    );
+
+    if (res.statusCode != 201) {
+      throw Exception("Failed to add trip stop (${res.statusCode})");
+    }
+
+    final decoded = _decode(res);
+    return decoded is Map<String, dynamic> ? decoded : {};
+  }
+
+  // =======================
   // TRIP LOCATION HISTORY
   // GET /admin/trips/:id/location-history
   // =======================
