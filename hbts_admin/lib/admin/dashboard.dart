@@ -3,6 +3,8 @@ import 'dart:math';
 import 'customers_page.dart';
 import 'drivers_dashboard.dart';
 import 'operators_dashboard.dart';
+import 'companies_page.dart';
+import 'conductors_page.dart';
 import 'buses_page.dart';
 import 'routes_page.dart';
 import 'trips_page.dart';
@@ -56,7 +58,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       final rejectedDriversFuture =
           DriverAdminApi.list(status: "rejected");
       final busesFuture = AdminApi.getBuses();
-      final busOwnersFuture = AdminApi.getBusOwners();
+      final busOwnersFuture = AdminApi.getCompanies();
       final routesFuture = AdminApi.getRoutes();
       final tripsFuture = AdminApi.getTrips();
 
@@ -227,7 +229,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     for (final item in owners) {
       if (item is! Map<String, dynamic>) continue;
       final status =
-          item["status"]?.toString().toLowerCase().trim() ?? "inactive";
+          item["status"]?.toString().toLowerCase().trim() ?? "active";
       if (status == "active") {
         active += 1;
       } else if (status == "suspended") {
@@ -350,6 +352,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
         label: "Bus Operators",
         icon: Icons.business_center_outlined,
         pageBuilder: (_) => const OperatorsDashboard(),
+      ),
+      _NavItem(
+        label: "Companies",
+        icon: Icons.apartment_outlined,
+        pageBuilder: (_) => const CompaniesPage(),
+      ),
+      _NavItem(
+        label: "Conductors",
+        icon: Icons.directions_bus_filled,
+        pageBuilder: (_) => const ConductorsPage(),
       ),
       _NavItem(
         label: "Buses",

@@ -19,7 +19,7 @@ class _FullDetailsReportPageState extends State<FullDetailsReportPage>
 
   List<Map<String, dynamic>> _passengers = [];
   List<Map<String, dynamic>> _drivers = [];
-  List<Map<String, dynamic>> _owners = [];
+  List<Map<String, dynamic>> _companies = [];
 
   @override
   void initState() {
@@ -59,11 +59,11 @@ class _FullDetailsReportPageState extends State<FullDetailsReportPage>
     }
 
     try {
-      final data = await AdminApi.getBusOwners();
-      _owners = data.cast<Map<String, dynamic>>();
+      final data = await AdminApi.getCompanies();
+      _companies = data.cast<Map<String, dynamic>>();
     } catch (e) {
-      errors.add("Bus owners: ${e.toString()}");
-      _owners = [];
+      errors.add("Companies: ${e.toString()}");
+      _companies = [];
     }
 
     if (!mounted) return;
@@ -95,7 +95,7 @@ class _FullDetailsReportPageState extends State<FullDetailsReportPage>
           tabs: const [
             Tab(text: "Passengers"),
             Tab(text: "Drivers"),
-            Tab(text: "Bus Operators"),
+            Tab(text: "Companies"),
           ],
         ),
       ),
@@ -144,7 +144,7 @@ class _FullDetailsReportPageState extends State<FullDetailsReportPage>
                           ),
                         ),
                         _OwnerList(
-                          items: _filter(_owners, ["name", "phone", "email"]),
+                          items: _filter(_companies, ["name", "phone", "email"]),
                         ),
                       ],
                     ),
@@ -242,7 +242,7 @@ class _OwnerList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (items.isEmpty) return const Center(child: Text("No bus operators found"));
+    if (items.isEmpty) return const Center(child: Text("No companies found"));
 
     return ListView.separated(
       padding: const EdgeInsets.all(12),
@@ -251,11 +251,12 @@ class _OwnerList extends StatelessWidget {
       itemBuilder: (_, index) {
         final op = items[index];
         final status = _safe(op["status"]);
+        final badgeText = status == "-" ? "COMPANY" : status;
         return _Tile(
           title: _safe(op["name"]),
           subtitle:
-              "Fleet size: ${_safe(op["fleet_size"])}\nDrivers: ${_safe(op["drivers"])}\nPhone: ${_safe(op["phone"])}",
-          badge: status.toUpperCase(),
+              "Email: ${_safe(op["email"])}\nPhone: ${_safe(op["phone"])}",
+          badge: badgeText.toUpperCase(),
           badgeColor: AppColors.accent,
         );
       },

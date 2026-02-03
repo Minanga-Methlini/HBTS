@@ -20,6 +20,10 @@ class _BusFormPageState extends State<BusFormPage> {
   final _modelCtrl = TextEditingController();
   final _serviceTypeCtrl = TextEditingController();
 
+  List<Map<String, dynamic>> _conductors = [];
+  bool _loadingConductors = false;
+  int? _selectedConductorId;
+
   bool _saving = false;
 
   int? get _busId {
@@ -42,6 +46,7 @@ class _BusFormPageState extends State<BusFormPage> {
       _modelCtrl.text = bus["model"]?.toString() ?? "";
       _serviceTypeCtrl.text = bus["service_type"]?.toString() ?? "";
     }
+    _loadConductors();
   }
 
   @override
@@ -61,9 +66,41 @@ class _BusFormPageState extends State<BusFormPage> {
     return int.tryParse(trimmed);
   }
 
+  int? _toInt(dynamic raw) {
+    if (raw is int) return raw;
+    return int.tryParse(raw?.toString() ?? "");
+  }
+
+  Future<void> _loadConductors() async {
+    setState(() => _loadingConductors = true);
+    try {
+      final data = await AdminApi.getConductors();
+      if (!mounted) return;
+      final list = data.cast<Map<String, dynamic>>();
+      int? selected;
+      final busId = _busId;
+      if (busId != null) {
+        final match = list.firstWhere(
+          (c) => _toInt(c["bus_id"]) == busId,
+          orElse: () => {},
+        );
+        selected = _toInt(match["conductor_id"] ?? match["id"]);
+      }
+      setState(() {
+        _conductors = list;
+        _selectedConductorId = selected;
+      });
+    } catch (_) {
+      // ignore for now
+    } finally {
+      if (mounted) setState(() => _loadingConductors = false);
+    }
+  }
+
   Map<String, dynamic> _buildPayload() {
     return {
       "operatorId": _parseInt(_operatorIdCtrl.text),
+      "conductorId": _selectedConductorId,
       "licensePlateNo": _plateCtrl.text.trim(),
       "routeNo": _routeCtrl.text.trim(),
       "capacity": _parseInt(_capacityCtrl.text),
@@ -237,6 +274,39 @@ class _BusFormPageState extends State<BusFormPage> {
                   label: "Service Type",
                   controller: _serviceTypeCtrl,
                 ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<int?>(
+                  value: _selectedConductorId,
+                  items: [
+                    const DropdownMenuItem<int?>(
+                      value: null,
+                      child: Text("No Conductor"),
+                    ),
+                    ..._conductors.map(
+                      (c) => DropdownMenuItem<int?>(
+                        value: _toInt(c["conductor_id"] ?? c["id"]),
+                        child: Text(
+                          "${c["name"] ?? "Conductor"} (ID: ${_toInt(c["conductor_id"] ?? c["id"]) ?? "-"})",
+                        ),
+                      ),
+                    ),
+                  ],
+                  onChanged: (value) {
+                    setState(() => _selectedConductorId = value);
+                  },
+                  decoration: const InputDecoration(
+                    labelText: "Assign Conductor",
+                  ),
+                  validator: (value) {
+                    if (value == null) return "Conductor is required";
+                    return null;
+                  },
+                ),
+                if (_loadingConductors)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 8),
+                    child: LinearProgressIndicator(),
+                  ),
                 const SizedBox(height: 18),
                 if (!isEdit)
                   ElevatedButton.icon(

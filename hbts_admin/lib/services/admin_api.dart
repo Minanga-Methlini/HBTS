@@ -174,19 +174,110 @@ class AdminApi {
   }
 
   // =======================
-  // GET BUS OWNERS (OPERATORS)
-  // GET /admin/operators?status=&search=
+  // GET COMPANIES
+  // GET /admin/companies?search=
   // =======================
-  static Future<List<dynamic>> getBusOwners({
-    String? status,
-    String search = "",
-  }) async {
+  static Future<List<dynamic>> getCompanies({String search = ""}) async {
     final query = <String, String>{};
-    if (status != null && status.isNotEmpty) {
-      query["status"] = status;
-    }
     if (search.isNotEmpty) {
       query["search"] = search;
+    }
+
+    final uri = Uri.parse("$baseUrl/admin/companies")
+        .replace(queryParameters: query.isEmpty ? null : query);
+
+    final res = await http.get(uri, headers: await _headers());
+
+    if (res.statusCode == 401 || res.statusCode == 403) {
+      throw Exception("Access denied. Admin login required.");
+    }
+
+    if (res.statusCode != 200) {
+      throw Exception("Failed to load companies (${res.statusCode})");
+    }
+
+    final data = _decode(res);
+    return data is List ? data : [];
+  }
+
+  // =======================
+  // ADD COMPANY
+  // POST /admin/companies
+  // =======================
+  static Future<Map<String, dynamic>> addCompany(
+    Map<String, dynamic> data,
+  ) async {
+    final uri = Uri.parse("$baseUrl/admin/companies");
+
+    final res = await http.post(
+      uri,
+      headers: await _headers(),
+      body: jsonEncode(data),
+    );
+
+    if (res.statusCode != 201) {
+      throw Exception("Failed to add company (${res.statusCode})");
+    }
+
+    final decoded = _decode(res);
+    return decoded is Map<String, dynamic> ? decoded : {};
+  }
+
+  // =======================
+  // UPDATE COMPANY
+  // PUT /admin/companies/:id
+  // =======================
+  static Future<Map<String, dynamic>> updateCompany(
+    int id,
+    Map<String, dynamic> data,
+  ) async {
+    final uri = Uri.parse("$baseUrl/admin/companies/$id");
+
+    final res = await http.put(
+      uri,
+      headers: await _headers(),
+      body: jsonEncode(data),
+    );
+
+    if (res.statusCode != 200) {
+      throw Exception("Failed to update company (${res.statusCode})");
+    }
+
+    final decoded = _decode(res);
+    return decoded is Map<String, dynamic> ? decoded : {};
+  }
+
+  // =======================
+  // DELETE COMPANY
+  // DELETE /admin/companies/:id
+  // =======================
+  static Future<void> deleteCompany(int id) async {
+    final uri = Uri.parse("$baseUrl/admin/companies/$id");
+
+    final res = await http.delete(
+      uri,
+      headers: await _headers(),
+    );
+
+    if (res.statusCode != 200) {
+      throw Exception("Failed to delete company (${res.statusCode})");
+    }
+  }
+
+  // =======================
+  // GET OPERATORS (USERS ROLE_ID=5)
+  // GET /admin/operators?search=
+  // =======================
+  static Future<List<dynamic>> getOperators({
+    String search = "",
+    int? companyId,
+  }) async {
+    final query = <String, String>{};
+    if (search.isNotEmpty) {
+      query["search"] = search;
+    }
+    if (companyId != null) {
+      query["companyId"] = companyId.toString();
     }
 
     final uri = Uri.parse("$baseUrl/admin/operators")
@@ -199,11 +290,202 @@ class AdminApi {
     }
 
     if (res.statusCode != 200) {
-      throw Exception("Failed to load bus operators (${res.statusCode})");
+      throw Exception("Failed to load operators (${res.statusCode})");
     }
 
     final data = _decode(res);
     return data is List ? data : [];
+  }
+
+  // =======================
+  // ADD OPERATOR
+  // POST /admin/operators
+  // =======================
+  static Future<Map<String, dynamic>> addOperator(
+    Map<String, dynamic> data,
+  ) async {
+    final uri = Uri.parse("$baseUrl/admin/operators");
+
+    final res = await http.post(
+      uri,
+      headers: await _headers(),
+      body: jsonEncode(data),
+    );
+
+    if (res.statusCode != 201) {
+      throw Exception("Failed to add operator (${res.statusCode})");
+    }
+
+    final decoded = _decode(res);
+    return decoded is Map<String, dynamic> ? decoded : {};
+  }
+
+  // =======================
+  // UPDATE OPERATOR
+  // PUT /admin/operators/:id
+  // =======================
+  static Future<Map<String, dynamic>> updateOperator(
+    int id,
+    Map<String, dynamic> data,
+  ) async {
+    final uri = Uri.parse("$baseUrl/admin/operators/$id");
+
+    final res = await http.put(
+      uri,
+      headers: await _headers(),
+      body: jsonEncode(data),
+    );
+
+    if (res.statusCode != 200) {
+      throw Exception("Failed to update operator (${res.statusCode})");
+    }
+
+    final decoded = _decode(res);
+    return decoded is Map<String, dynamic> ? decoded : {};
+  }
+
+  // =======================
+  // DELETE OPERATOR
+  // DELETE /admin/operators/:id
+  // =======================
+  static Future<void> deleteOperator(int id) async {
+    final uri = Uri.parse("$baseUrl/admin/operators/$id");
+
+    final res = await http.delete(
+      uri,
+      headers: await _headers(),
+    );
+
+    if (res.statusCode != 200) {
+      throw Exception("Failed to delete operator (${res.statusCode})");
+    }
+  }
+
+  // =======================
+  // GET CONDUCTORS
+  // GET /admin/conductors?search=
+  // =======================
+  static Future<List<dynamic>> getConductors({String search = ""}) async {
+    final query = <String, String>{};
+    if (search.isNotEmpty) {
+      query["search"] = search;
+    }
+
+    final uri = Uri.parse("$baseUrl/admin/conductors")
+        .replace(queryParameters: query.isEmpty ? null : query);
+
+    final res = await http.get(uri, headers: await _headers());
+
+    if (res.statusCode == 401 || res.statusCode == 403) {
+      throw Exception("Access denied. Admin login required.");
+    }
+
+    if (res.statusCode != 200) {
+      throw Exception("Failed to load conductors (${res.statusCode})");
+    }
+
+    final data = _decode(res);
+    return data is List ? data : [];
+  }
+
+  // =======================
+  // ADD CONDUCTOR
+  // POST /admin/conductors
+  // =======================
+  static Future<Map<String, dynamic>> addConductor(
+    Map<String, dynamic> data,
+  ) async {
+    final uri = Uri.parse("$baseUrl/admin/conductors");
+
+    final res = await http.post(
+      uri,
+      headers: await _headers(),
+      body: jsonEncode(data),
+    );
+
+    if (res.statusCode != 201) {
+      final decoded = _decode(res);
+      final message =
+          decoded is Map<String, dynamic> ? decoded["message"] : null;
+      throw Exception(
+        message ?? "Failed to add conductor (${res.statusCode})",
+      );
+    }
+
+    final decoded = _decode(res);
+    return decoded is Map<String, dynamic> ? decoded : {};
+  }
+
+  // =======================
+  // UPDATE CONDUCTOR
+  // PUT /admin/conductors/:id
+  // =======================
+  static Future<Map<String, dynamic>> updateConductor(
+    int id,
+    Map<String, dynamic> data,
+  ) async {
+    final uri = Uri.parse("$baseUrl/admin/conductors/$id");
+
+    final res = await http.put(
+      uri,
+      headers: await _headers(),
+      body: jsonEncode(data),
+    );
+
+    if (res.statusCode != 200) {
+      final decoded = _decode(res);
+      final message =
+          decoded is Map<String, dynamic> ? decoded["message"] : null;
+      throw Exception(
+        message ?? "Failed to update conductor (${res.statusCode})",
+      );
+    }
+
+    final decoded = _decode(res);
+    return decoded is Map<String, dynamic> ? decoded : {};
+  }
+
+  // =======================
+  // DELETE CONDUCTOR
+  // DELETE /admin/conductors/:id
+  // =======================
+  static Future<void> deleteConductor(int id) async {
+    final uri = Uri.parse("$baseUrl/admin/conductors/$id");
+
+    final res = await http.delete(
+      uri,
+      headers: await _headers(),
+    );
+
+    if (res.statusCode != 200) {
+      throw Exception("Failed to delete conductor (${res.statusCode})");
+    }
+  }
+
+  // =======================
+  // ADD ADMIN-CREATED USER (ROLE_ID = 2)
+  // POST /admin/users
+  // =======================
+  static Future<Map<String, dynamic>> addAdminUser(
+    Map<String, dynamic> data,
+  ) async {
+    final uri = Uri.parse("$baseUrl/admin/users");
+
+    final res = await http.post(
+      uri,
+      headers: await _headers(),
+      body: jsonEncode(data),
+    );
+
+    if (res.statusCode != 201) {
+      final decoded = _decode(res);
+      final message =
+          decoded is Map<String, dynamic> ? decoded["message"] : null;
+      throw Exception(message ?? "Failed to add user (${res.statusCode})");
+    }
+
+    final decoded = _decode(res);
+    return decoded is Map<String, dynamic> ? decoded : {};
   }
 
   // =======================

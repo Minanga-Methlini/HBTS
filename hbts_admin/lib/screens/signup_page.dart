@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'login_page.dart';
 import 'otp_page.dart';
 import '../services/auth_api.dart';
+import '../services/admin_api.dart';
 import '../widgets/app_background.dart';
 import '../widgets/app_brand.dart';
 import '../theme/app_theme.dart';
@@ -45,32 +46,47 @@ class _SignupScreenState extends State<SignupScreen> {
 
     setState(() => _isLoading = true);
     try {
-      final result = await AuthApi.signup(
-        fullName: _nameController.text.trim(),
-        email: _emailController.text.trim(),
-        phone: _phoneController.text.trim(),
-        password: _passwordController.text,
-      );
+      if (widget.allowSignup) {
+        await AdminApi.addAdminUser({
+          "name": _nameController.text.trim(),
+          "email": _emailController.text.trim(),
+          "phone": _phoneController.text.trim(),
+          "password": _passwordController.text,
+        });
 
-      final challengeId = result["challengeId"];
-      if (challengeId == null) {
-        throw Exception("Invalid response from server");
-      }
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("User created")),
+        );
+        Navigator.pop(context);
+      } else {
+        final result = await AuthApi.signup(
+          fullName: _nameController.text.trim(),
+          email: _emailController.text.trim(),
+          phone: _phoneController.text.trim(),
+          password: _passwordController.text,
+        );
 
-      if (!mounted) return;
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => OtpScreen(
-            flow: OtpFlow.signupVerify,
-            challengeId: int.parse(challengeId.toString()),
-            saveTokens: false,
-            onVerified: () {
-              Navigator.popUntil(context, (route) => route.isFirst);
-            },
+        final challengeId = result["challengeId"];
+        if (challengeId == null) {
+          throw Exception("Invalid response from server");
+        }
+
+        if (!mounted) return;
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => OtpScreen(
+              flow: OtpFlow.signupVerify,
+              challengeId: int.parse(challengeId.toString()),
+              saveTokens: false,
+              onVerified: () {
+                Navigator.popUntil(context, (route) => route.isFirst);
+              },
+            ),
           ),
-        ),
-      );
+        );
+      }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
